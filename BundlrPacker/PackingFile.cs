@@ -14,16 +14,17 @@ namespace BundlrPacker
 			this.relativePath = relativePath;
 		}
 
-		public byte[] GetMetadata (FileStream output, int pos)
+		public int GetMetadata (Stream output, int pos)
 		{
 			using (BinaryWriter wtr = new BinaryWriter (output, System.Text.Encoding.UTF8)) {
 				wtr.Write (relativePath);
 				wtr.Write (pos);
 				wtr.Write (fileInfo.Length);
 			}
+			return pos + fileInfo.Length;
 		}
 
-		public void Pack (FileStream output)
+		public void Pack (Stream output)
 		{
 			if (!fileInfo.Exists) {
 				Console.WriteLine (string.Format ("File '{0}' not exists", relativePath));
@@ -40,6 +41,7 @@ namespace BundlrPacker
 					output.Write (buffer, 0, buffer.Length);
 					numBytesRead += n;
 				}
+
 			}
 		}
 

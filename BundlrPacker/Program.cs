@@ -12,19 +12,9 @@ namespace BundlrPacker
 		{
 			var pathArg = "~/Documents";
 
-			var env = Environment.OSVersion.Platform;
-			if (env == PlatformID.Unix || env == PlatformID.MacOSX) {
-				// Unix-based系统下将开头的~转换成用户目录
-				if ((pathArg.Length == 1 && pathArg == "~")
-				    ||
-				    pathArg.Length > 1 && pathArg.StartsWith ("~/")) {
-					pathArg = Environment.GetEnvironmentVariable ("HOME") +
-					(pathArg.Length > 1 
-							? pathArg.Substring (1) : string.Empty);
-				}
-			}
 
-			var di = new DirectoryInfo (pathArg);
+
+			var di = new DirectoryInfo (Repath(pathArg));
 
 			List<FileInfo> files = new List<FileInfo> ();
 			WalkDir (di, files);
@@ -38,6 +28,9 @@ namespace BundlrPacker
 
 				Console.WriteLine (pf);
 			}
+
+			Packer packer = new Packer (Repath ("~/test.blr"));
+			packer.Pack (files);
 		}
 
 		public static void WalkDir (DirectoryInfo di, List<FileInfo> files)
@@ -50,6 +43,21 @@ namespace BundlrPacker
 				else if (fsi is FileInfo)
 					files.Add (fsi as FileInfo);
 			}
+		}
+
+		public static string Repath(string path){
+			var env = Environment.OSVersion.Platform;
+			if (env == PlatformID.Unix || env == PlatformID.MacOSX) {
+				// Unix-based系统下将开头的~转换成用户目录
+				if ((path.Length == 1 && path == "~")
+					||
+					path.Length > 1 && path.StartsWith ("~/")) {
+					path = Environment.GetEnvironmentVariable ("HOME") +
+						(path.Length > 1 
+							? path.Substring (1) : string.Empty);
+				}
+			}
+			return path;
 		}
 	}
 }
