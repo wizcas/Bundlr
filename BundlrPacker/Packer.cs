@@ -36,11 +36,13 @@ namespace BundlrPacker
 		{
 			Console.WriteLine ("Generating metadata...");
 			using (MemoryStream s = new MemoryStream ()) {
-				long pos = 0;
-				foreach (var file in files) {
-					pos = file.GetMetadata (s, pos);
+				using (BinaryWriter wtr = new BinaryWriter (s, System.Text.Encoding.UTF8)) {
+					long pos = 0;
+					foreach (var file in files) {
+						pos = file.GetMetadata (s, wtr, pos);
+					}
+					return s.ToArray ();
 				}
-				return s.ToArray ();
 			}
 		}
 	}
