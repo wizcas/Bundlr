@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace BundlrPacker
+namespace Bundlr
 {
-	public class Constants
+	public static class Constants
 	{
 		public const string PATH_SEPARATER = "/";
 	}

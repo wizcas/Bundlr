@@ -16,18 +16,21 @@ namespace BundlrPacker
 		public void Pack (List<PackingFile> files)
 		{
 			using (FileStream fs = new FileStream (bundlePath, FileMode.Create, FileAccess.Write)) {
-				byte[] metadata = GenerateMetadata (files);
-				int metaLen = metadata.Length;
+				using (BinaryWriter wtr = new BinaryWriter (fs, System.Text.Encoding.UTF8)) {
+					byte[] metadata = GenerateMetadata (files);
+					int metaLen = metadata.Length;
 
-				fs.WriteByte(Convert.ToByte (metaLen));
+					wtr.Write (metaLen);
 
-				// Write metadata into file
-				fs.Write (metadata, 0, metaLen);
 
-				// Write file bytes
-				foreach (var file in files) {
-					Console.WriteLine (string.Format ("Packing file '{0}'...", file.relativePath));
-					file.Pack (fs);
+					// Write metadata into file
+					fs.Write (metadata, 0, metaLen);
+
+					// Write file bytes
+					foreach (var file in files) {
+						Console.WriteLine (string.Format ("Packing file '{0}'...", file.relativePath));
+						file.Pack (fs);
+					}
 				}
 			}
 		}
@@ -36,7 +39,7 @@ namespace BundlrPacker
 		{
 			Console.WriteLine ("Generating metadata...");
 			using (MemoryStream s = new MemoryStream ()) {
-				using (BinaryWriter wtr = new BinaryWriter (s, System.Text.Encoding.UTF8)) {
+				using (BinaryWriter wtr = new BinaryWriter (s)) {
 					long pos = 0;
 					foreach (var file in files) {
 						pos = file.GetMetadata (s, wtr, pos);

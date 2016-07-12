@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BundlrPacker", "BundlrPacker\BundlrPacker.csproj", "{057BD38A-2DAE-4196-A711-5206126B01CF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bundlr", "Bundlr\Bundlr.csproj", "{C8085307-AE1E-4BF3-AE7E-AEBCE490574A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -13,5 +15,9 @@ Global
 		{057BD38A-2DAE-4196-A711-5206126B01CF}.Debug|x86.Build.0 = Debug|x86
 		{057BD38A-2DAE-4196-A711-5206126B01CF}.Release|x86.ActiveCfg = Release|x86
 		{057BD38A-2DAE-4196-A711-5206126B01CF}.Release|x86.Build.0 = Release|x86
+		{C8085307-AE1E-4BF3-AE7E-AEBCE490574A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C8085307-AE1E-4BF3-AE7E-AEBCE490574A}.Debug|x86.Build.0 = Debug|Any CPU
+		{C8085307-AE1E-4BF3-AE7E-AEBCE490574A}.Release|x86.ActiveCfg = Release|Any CPU
+		{C8085307-AE1E-4BF3-AE7E-AEBCE490574A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
