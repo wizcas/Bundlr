@@ -23,7 +23,7 @@ namespace BundlrPacker
 			Packer packer = new Packer (Utils.Repath ("~/test.blr"));
 			packer.Pack (files);
 
-			BundleManager.Instance.Load ("test", "~/test.blr");
+			TestLoad ();
 		}
 
 		public static void WalkDir (DirectoryInfo di, List<PackingFile> files)
@@ -40,6 +40,18 @@ namespace BundlrPacker
 						relativePath = relativePath.Substring (1);
 					files.Add (new PackingFile (fi, relativePath));
 				}
+			}
+		}
+
+		public static void TestLoad()
+		{
+			BundleManager.Instance.Load ("test", "~/test.blr");
+			Console.WriteLine ("Has img.jpg? " + BundleManager.Instance["test"].Has ("img.jpg"));
+			using(FileStream fs = new FileStream(Utils.Repath("~/img-extract.jpg"), FileMode.Create, FileAccess.Write)){
+				var b = BundleManager.Instance["test"].Get ("img.jpg");
+				fs.Write (b, 0, b.Length);
+				fs.Flush ();
+				Console.WriteLine ("Extracted img.jpg to ~/img-extract.jpg");
 			}
 		}
 	}

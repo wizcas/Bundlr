@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 
-namespace BundlrPacker
+namespace Bundlr
 {
 	public class Packer
 	{
@@ -33,6 +33,7 @@ namespace BundlrPacker
 					}
 				}
 			}
+			Console.WriteLine (string.Format ("Successfully packed to '{0}'.", bundlePath));
 		}
 
 		private byte[] GenerateMetadata (List<PackingFile> files)

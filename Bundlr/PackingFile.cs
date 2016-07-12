@@ -2,7 +2,7 @@
 using System.IO;
 using Bundlr;
 
-namespace BundlrPacker
+namespace Bundlr
 {
 	public class PackingFile
 	{
