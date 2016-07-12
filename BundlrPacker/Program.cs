@@ -6,42 +6,37 @@ namespace BundlrPacker
 {
 	class MainClass
 	{
-		public const string PATH_SEPARATER = "/";
+		private static string rootPath;
 
 		public static void Main (string[] args)
 		{
-			var pathArg = "~/Documents";
+			var pathArg = Repath("~/test");
 
+			rootPath = pathArg;
 
+			var di = new DirectoryInfo (rootPath);
 
-			var di = new DirectoryInfo (Repath(pathArg));
-
-			List<FileInfo> files = new List<FileInfo> ();
+			List<PackingFile> files = new List<PackingFile> ();
 			WalkDir (di, files);
-
-			foreach (var fi in files) {
-				string relativePath = fi.FullName.Replace (pathArg, string.Empty).Replace ("\\", PATH_SEPARATER);
-				if (relativePath.StartsWith (PATH_SEPARATER))
-					relativePath = relativePath.Substring (1);
-
-				PackingFile pf = new PackingFile (fi, relativePath);
-
-				Console.WriteLine (pf);
-			}
 
 			Packer packer = new Packer (Repath ("~/test.blr"));
 			packer.Pack (files);
 		}
 
-		public static void WalkDir (DirectoryInfo di, List<FileInfo> files)
+		public static void WalkDir (DirectoryInfo di, List<PackingFile> files)
 		{
 			if (!di.Exists)
 				return;
 			foreach (var fsi in di.GetFileSystemInfos()) {
 				if (fsi is DirectoryInfo)
 					WalkDir (fsi as DirectoryInfo, files);
-				else if (fsi is FileInfo)
-					files.Add (fsi as FileInfo);
+				else if (fsi is FileInfo) {
+					FileInfo fi = fsi as FileInfo;
+					string relativePath = fi.FullName.Replace (rootPath, string.Empty).Replace ("\\", Constants.PATH_SEPARATER);
+					if (relativePath.StartsWith (Constants.PATH_SEPARATER))
+						relativePath = relativePath.Substring (1);
+					files.Add (new PackingFile (fi, relativePath));
+				}
 			}
 		}
 

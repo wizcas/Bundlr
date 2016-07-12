@@ -8,13 +8,13 @@ namespace BundlrPacker
 		public FileInfo fileInfo;
 		public string relativePath;
 
-		public PackingFile (FileInfo file, string relativePath)
+		public PackingFile (FileInfo fileInfo, string relativePath)
 		{
 			this.fileInfo = fileInfo;
 			this.relativePath = relativePath;
 		}
 
-		public int GetMetadata (Stream output, int pos)
+		public long GetMetadata (Stream output, long pos)
 		{
 			using (BinaryWriter wtr = new BinaryWriter (output, System.Text.Encoding.UTF8)) {
 				wtr.Write (relativePath);
@@ -35,7 +35,7 @@ namespace BundlrPacker
 				byte[] buffer = new byte[1024];
 				int numBytesRead = 0;
 				while (true) {
-					int n = fs.Read (buffer, numBytesRead, 1024);
+					int n = fs.Read (buffer, 0, 1024);
 					if (n == 0)
 						break;
 					output.Write (buffer, 0, buffer.Length);

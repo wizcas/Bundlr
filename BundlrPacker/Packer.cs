@@ -19,15 +19,14 @@ namespace BundlrPacker
 				byte[] metadata = GenerateMetadata (files);
 				int metaLen = metadata.Length;
 
-				// Write metadata's length (int) into file
-				using (BinaryWriter wtr = new BinaryWriter (fs)) {
-					fs.Write (metaLen);
-				}
+				fs.WriteByte(Convert.ToByte (metaLen));
+
 				// Write metadata into file
 				fs.Write (metadata, 0, metaLen);
 
 				// Write file bytes
 				foreach (var file in files) {
+					Console.WriteLine (string.Format ("Packing file '{0}'...", file.relativePath));
 					file.Pack (fs);
 				}
 			}
@@ -35,8 +34,9 @@ namespace BundlrPacker
 
 		private byte[] GenerateMetadata (List<PackingFile> files)
 		{
+			Console.WriteLine ("Generating metadata...");
 			using (MemoryStream s = new MemoryStream ()) {
-				int pos = 0;
+				long pos = 0;
 				foreach (var file in files) {
 					pos = file.GetMetadata (s, pos);
 				}
