@@ -9,9 +9,22 @@ namespace BundlrPacker
 	{
 		private static string rootPath;
 
+		public static void PrintHelp ()
+		{
+			Console.WriteLine (
+				"Usage:\tBundlrPacker.exe <ROOT_DIR>\r\n" +
+				"<ROOT_DIR>\tThe root directory of packing files"
+			);
+		}
+
 		public static void Main (string[] args)
 		{
-			var pathArg = Utils.Repath("~/test");
+			if (args.Length < 1) {
+				PrintHelp ();
+				return;
+			}
+			
+			var	pathArg = Utils.Repath (args [0]);
 
 			rootPath = pathArg;
 
@@ -43,12 +56,12 @@ namespace BundlrPacker
 			}
 		}
 
-		public static void TestLoad()
+		public static void TestLoad ()
 		{
 			BundleManager.Instance.Load ("test", "~/test.blr");
-			Console.WriteLine ("Has img.jpg? " + BundleManager.Instance["test"].Has ("img.jpg"));
-			using(FileStream fs = new FileStream(Utils.Repath("~/img-extract.jpg"), FileMode.Create, FileAccess.Write)){
-				var b = BundleManager.Instance["test"].Get ("img.jpg");
+			Console.WriteLine ("Has img.jpg? " + BundleManager.Instance ["test"].Has ("img.jpg"));
+			using (FileStream fs = new FileStream (Utils.Repath ("~/img-extract.jpg"), FileMode.Create, FileAccess.Write)) {
+				var b = BundleManager.Instance ["test"].Get ("img.jpg");
 				fs.Write (b, 0, b.Length);
 				fs.Flush ();
 				Console.WriteLine ("Extracted img.jpg to ~/img-extract.jpg");
