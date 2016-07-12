@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using Bundlr;
+using System.Diagnostics;
 
 namespace BundlrPacker
 {
@@ -12,31 +13,41 @@ namespace BundlrPacker
 		public static void PrintHelp ()
 		{
 			Console.WriteLine (
-				"Usage:\tBundlrPacker.exe <ROOT_DIR>\r\n" +
-				"<ROOT_DIR>\tThe root directory of packing files"
+				"Usage:\tBundlrPacker.exe <ROOT_DIR> <OUTPUT_FILE>\r\n" +
+				"<ROOT_DIR>\tThe root directory of packing files." +
+				"<OUTPUT_FILE>\tThe path of output file."
 			);
 		}
 
 		public static void Main (string[] args)
 		{
-			if (args.Length < 1) {
+			if (args.Length < 2) {
 				PrintHelp ();
 				return;
 			}
-			
-			var	pathArg = Utils.Repath (args [0]);
+							
+			var	inPath = Utils.Repath (args [0]);
+			var outPath = Utils.Repath (args [1]);
 
-			rootPath = pathArg;
+			rootPath = inPath;
+
+			if (!outPath.EndsWith (".blr"))
+				outPath += ".blr";
 
 			var di = new DirectoryInfo (rootPath);
+
+			Stopwatch timer = new Stopwatch ();
+			timer.Reset ();
+			timer.Start ();
 
 			List<PackingFile> files = new List<PackingFile> ();
 			WalkDir (di, files);
 
-			Packer packer = new Packer (Utils.Repath ("~/test.blr"));
+			Packer packer = new Packer (Utils.Repath (outPath));
 			packer.Pack (files);
 
-			TestLoad ();
+			timer.Stop ();
+			Console.WriteLine ("{0} files are packed. ({1}ms)", files.Count, timer.ElapsedMilliseconds);
 		}
 
 		public static void WalkDir (DirectoryInfo di, List<PackingFile> files)
@@ -53,18 +64,6 @@ namespace BundlrPacker
 						relativePath = relativePath.Substring (1);
 					files.Add (new PackingFile (fi, relativePath));
 				}
-			}
-		}
-
-		public static void TestLoad ()
-		{
-			BundleManager.Instance.Load ("test", "~/test.blr");
-			Console.WriteLine ("Has img.jpg? " + BundleManager.Instance ["test"].Has ("img.jpg"));
-			using (FileStream fs = new FileStream (Utils.Repath ("~/img-extract.jpg"), FileMode.Create, FileAccess.Write)) {
-				var b = BundleManager.Instance ["test"].Get ("img.jpg");
-				fs.Write (b, 0, b.Length);
-				fs.Flush ();
-				Console.WriteLine ("Extracted img.jpg to ~/img-extract.jpg");
 			}
 		}
 	}
