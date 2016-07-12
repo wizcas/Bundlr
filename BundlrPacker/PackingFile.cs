@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Bundlr;
 
 namespace BundlrPacker
 {
@@ -32,18 +33,19 @@ namespace BundlrPacker
 			}
 				
 			using (FileStream fs = fileInfo.Open (FileMode.Open)) {
-				byte[] buffer = new byte[fs.Length];
-				int numBytesRead = 0;
-				int numBytesLeft = (int)fs.Length;
-				// Read file and write bytes into the output stream
-				while (numBytesLeft > 0) {
-					int n = fs.Read (buffer, numBytesRead, numBytesLeft);
-					if (n == 0)
-						break;
-					output.Write (buffer, numBytesRead, n);
-					numBytesRead += n;
-					numBytesLeft -= n;
-				}
+//				byte[] buffer = new byte[fs.Length];
+//				int numBytesRead = 0;
+//				int numBytesLeft = (int)fs.Length;
+//				// Read file and write bytes into the output stream
+//				while (numBytesLeft > 0) {
+//					int n = fs.Read (buffer, numBytesRead, numBytesLeft);
+//					if (n == 0)
+//						break;
+//					output.Write (buffer, numBytesRead, n);
+//					numBytesRead += n;
+//					numBytesLeft -= n;
+//				}
+				Utils.Stream2Stream(fs, output, fs.Length);
 			}
 		}
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace Bundlr
 {
@@ -18,6 +19,23 @@ namespace Bundlr
 				}
 			}
 			return path;
+		}
+
+		public static void Stream2Stream (Stream input, Stream output, long numBytesTotal)
+		{
+			byte[] buffer = new byte[numBytesTotal];
+			int numBytesRead = 0;
+			int numBytesLeft = (int)numBytesTotal;
+			// Read file and write bytes into the output stream
+			while (numBytesLeft > 0) {
+				int n = input.Read (buffer, numBytesRead, numBytesLeft);
+				if (n == 0)
+					break;
+				output.Write (buffer, numBytesRead, n);
+				numBytesRead += n;
+				numBytesLeft -= n;
+			}
+			output.Flush ();
 		}
 	}
 }
