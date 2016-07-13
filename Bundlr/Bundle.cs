@@ -12,9 +12,13 @@ namespace Bundlr
 		private FileStream fs;
 		private BinaryReader rdr;
 
+		public Action<string> onDisposed;
+
 		public string Id { get ; private set; }
 
 		public int MetaLen { get; private set; }
+
+		internal string FilePath{ get; private set; }
 
 		private int HeaderLen {
 			get {
@@ -40,7 +44,8 @@ namespace Bundlr
 
 		private Bundle (string filePath)
 		{
-			fs = new FileStream (filePath, FileMode.Open, FileAccess.Read);
+			FilePath = filePath;
+			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read);
 			rdr = new BinaryReader (fs, Encoding.UTF8);
 			LoadMetadata ();
 		}
@@ -116,6 +121,10 @@ namespace Bundlr
 					rdr = null;
 				}
 				dictMetadata.Clear ();
+				if (onDisposed != null) {
+					onDisposed (Id);
+					onDisposed = null;
+				}
 			}
 		}
 	}
