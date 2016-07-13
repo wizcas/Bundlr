@@ -27,12 +27,16 @@ namespace BundlrPacker
 			}
 							
 			var	inPath = Utils.Repath (args [0]);
-			var outPath = Utils.Repath (args [1]);
-
+			// 规范输入路径，必须以‘/‘结尾
+			if (!inPath.EndsWith (Constants.OSPathSeparator))
+				inPath += Constants.OSPathSeparator;
 			rootPath = inPath;
 
+			var outPath = Utils.Repath (args [1]);
 			if (!outPath.EndsWith (".blr"))
 				outPath += ".blr";
+
+			Console.WriteLine(string.Format("Packing '{0}' --> '{1}'", inPath, outPath));
 
 			var di = new DirectoryInfo (rootPath);
 
@@ -50,21 +54,25 @@ namespace BundlrPacker
 			Console.WriteLine ("{0} files are packed. ({1}ms)", files.Count, timer.ElapsedMilliseconds);
 		}
 
-		public static void WalkDir (DirectoryInfo di, List<PackingFile> files)
+		public static void WalkDir (DirectoryInfo di, List<PackingFile> files, Packer packer)
 		{
 			if (!di.Exists)
 				return;
 			foreach (var fsi in di.GetFileSystemInfos()) {
 				if (fsi is DirectoryInfo)
-					WalkDir (fsi as DirectoryInfo, files);
+					WalkDir (fsi as DirectoryInfo, files, packer);
 				else if (fsi is FileInfo) {
 					FileInfo fi = fsi as FileInfo;
-					string relativePath = fi.FullName.Replace (rootPath, string.Empty).Replace ("\\", Constants.PATH_SEPARATER);
-					if (relativePath.StartsWith (Constants.PATH_SEPARATER))
-						relativePath = relativePath.Substring (1);
-					files.Add (new PackingFile (fi, relativePath));
+					//string relativePath = fi.FullName.Replace (rootPath, string.Empty).Replace ("\\", Constants.PathSeparator);
+					//files.Add (new PackingFile (fi, relativePath));
+					packer.AddFile(fi, FileFullPath2RelativePath(fi));
 				}
 			}
+		}
+
+		public static string FileFullPath2RelativePath(FileInfo fileInfo)
+		{
+			return fileInfo.FullName.Replace (rootPath, string.Empty).Replace ("\\", Constants.PathSeparator);
 		}
 	}
 }

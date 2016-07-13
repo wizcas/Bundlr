@@ -7,8 +7,7 @@ namespace Bundlr
 	{
 		public static string Repath (string path)
 		{
-			var env = Environment.OSVersion.Platform;
-			if (env == PlatformID.Unix || env == PlatformID.MacOSX) {
+			if (Constants.OSPlatform == PlatformID.Unix || Constants.OSPlatform == PlatformID.MacOSX) {
 				// Unix-based系统下将开头的~转换成用户目录
 				if ((path.Length == 1 && path == "~")
 				    ||
