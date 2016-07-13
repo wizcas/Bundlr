@@ -57,11 +57,8 @@ namespace Bundlr
 				MetaLen = rdr.ReadInt32 ();
 
 				while (fs.Position < HeaderLen) {
-					string relPath = rdr.ReadString ();
-					long pos = rdr.ReadInt64 ();
-					long length = rdr.ReadInt64 ();
-					FileMeta fm = new FileMeta (relPath, pos, length);
-					dictMetadata [relPath] = fm;
+					var fm = FileMeta.Deserialize (rdr);
+					dictMetadata [fm.relativePath] = fm;
 				}
 			}
 		}
@@ -70,7 +67,7 @@ namespace Bundlr
 		{
 			Console.WriteLine ("[Files in bundle]");
 			foreach (var kv in dictMetadata) {
-				Console.WriteLine (string.Format ("\t{0}: {1}, {2}", kv.Key, kv.Value.Pos, kv.Value.Length));
+				Console.WriteLine (string.Format ("\t{0}: {1}, {2}", kv.Key, kv.Value.pos, kv.Value.pos));
 			}
 		}
 
@@ -92,14 +89,14 @@ namespace Bundlr
 			lock (fs) {
 				try {
 					// 计算新起始位置和当前流指针位置的偏差值
-					long newPos = HeaderLen + meta.Pos;
+					long newPos = HeaderLen + meta.pos;
 					long offset2Current = newPos - fs.Position;
 					// 如果新起始位置在别处，则根据与当前指针位置的偏差值移动指针
 					if (offset2Current != 0)
 						fs.Seek (offset2Current, SeekOrigin.Current);
 				
 					using (MemoryStream ms = new MemoryStream ()) {
-						Utils.Stream2Stream (fs, ms, meta.Length);
+						Utils.Stream2Stream (fs, ms, meta.length);
 						return ms.ToArray ();
 					}
 				} catch (Exception e) {

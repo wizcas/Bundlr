@@ -28,7 +28,7 @@ namespace Bundlr
 
 					// Write file bytes
 					foreach (var file in files) {
-						Console.WriteLine (string.Format ("Packing file '{0}'...", file.relativePath));
+						Console.WriteLine (string.Format ("Packing file '{0}'...", file.metadata.relativePath));
 						file.Pack (fs);
 					}
 				}
@@ -43,7 +43,7 @@ namespace Bundlr
 				using (BinaryWriter wtr = new BinaryWriter (s)) {
 					long pos = 0;
 					foreach (var file in files) {
-						pos = file.GetMetadata (s, wtr, pos);
+						pos = file.GenerateMetadata (wtr, pos);
 					}
 					return s.ToArray ();
 				}
