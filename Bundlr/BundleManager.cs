@@ -19,8 +19,8 @@ namespace Bundlr
 
 		public Bundle this [string id] {
 			get {
-				lock (dictBundles) {
-					if (dictBundles.ContainsKey (id))
+				lock (this) {
+					if (Has (id))
 						return dictBundles [id];
 					return null;
 				}
@@ -34,30 +34,26 @@ namespace Bundlr
 
 		public bool Has (string id)
 		{
-			lock (dictBundles) {
-				return dictBundles.ContainsKey (id);
-			}
+			return dictBundles.ContainsKey (id);
 		}
 
 		public Bundle Load (string id, string filePath)
 		{
-			Bundle ret;
-			if (!Has (id)) {
-				lock (dictBundles) {
+			lock (this) {
+				Bundle ret;
+				if (!Has (id)) {
 					ret = Bundle.Load (id, filePath);
 					dictBundles [id] = ret;
-				}
-			} else {
-				lock (dictBundles) {
+				} else {
 					ret = dictBundles [id];
 				}
+				return ret;
 			}
-			return ret;
 		}
 
 		public void DisposeAll ()
 		{
-			lock (dictBundles) {
+			lock (this) {
 				foreach (var kv in dictBundles) {
 					kv.Value.Dispose ();
 				}

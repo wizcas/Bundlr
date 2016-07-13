@@ -47,15 +47,17 @@ namespace Bundlr
 
 		private void LoadMetadata ()
 		{
-			fs.Seek (0, SeekOrigin.Begin);
-			MetaLen = rdr.ReadInt32 ();
+			lock (fs) {
+				fs.Seek (0, SeekOrigin.Begin);
+				MetaLen = rdr.ReadInt32 ();
 
-			while (fs.Position < HeaderLen) {
-				string relPath = rdr.ReadString ();
-				long pos = rdr.ReadInt64 ();
-				long length = rdr.ReadInt64 ();
-				FileMeta fm = new FileMeta (relPath, pos, length);
-				dictMetadata [relPath] = fm;
+				while (fs.Position < HeaderLen) {
+					string relPath = rdr.ReadString ();
+					long pos = rdr.ReadInt64 ();
+					long length = rdr.ReadInt64 ();
+					FileMeta fm = new FileMeta (relPath, pos, length);
+					dictMetadata [relPath] = fm;
+				}
 			}
 		}
 
@@ -69,9 +71,7 @@ namespace Bundlr
 
 		public bool Has (string relativePath)
 		{
-			lock (dictMetadata) {
-				return dictMetadata.ContainsKey (relativePath);
-			}
+			return dictMetadata.ContainsKey (relativePath);
 		}
 
 		public byte[] Get (string relativePath)
@@ -79,32 +79,34 @@ namespace Bundlr
 			if (!Has (relativePath))
 				return null;
 
-			FileMeta meta = null;
-			lock (dictMetadata) {
-				meta = dictMetadata [relativePath];
-			}
+			FileMeta meta = dictMetadata [relativePath];
 
 			if (meta == null)
 				return null;
 
 			lock (fs) {
-				// 计算新起始位置和当前流指针位置的偏差值
-				long newPos = HeaderLen + meta.Pos;
-				long offset2Current = newPos - fs.Position;
-				// 如果新起始位置在别处，则根据与当前指针位置的偏差值移动指针
-				if (offset2Current != 0)
-					fs.Seek (offset2Current, SeekOrigin.Current);
-				//fs.Read(data, 0, meta.Length);
-				using (MemoryStream ms = new MemoryStream ()) {
-					Utils.Stream2Stream (fs, ms, meta.Length);
-					return ms.ToArray ();
+				try {
+					// 计算新起始位置和当前流指针位置的偏差值
+					long newPos = HeaderLen + meta.Pos;
+					long offset2Current = newPos - fs.Position;
+					// 如果新起始位置在别处，则根据与当前指针位置的偏差值移动指针
+					if (offset2Current != 0)
+						fs.Seek (offset2Current, SeekOrigin.Current);
+				
+					using (MemoryStream ms = new MemoryStream ()) {
+						Utils.Stream2Stream (fs, ms, meta.Length);
+						return ms.ToArray ();
+					}
+				} catch (Exception e) {
+					Console.WriteLine ("Extracting data error: " + e);
+					return null;
 				}
 			}
 		}
 
 		public void Dispose ()
 		{
-			lock (this) {
+			lock (fs) {
 				if (fs != null) {
 					fs.Dispose ();
 					fs = null;

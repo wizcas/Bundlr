@@ -2,80 +2,125 @@
 using Bundlr;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace BundlrTest
 {
 	class MainClass
 	{
-		private static string dirRoot = Utils.Repath ("~/HJD/");
+		public static string ActualDirRoot = Utils.Repath ("~/HJD/");
+		const string BundleId = "test";
+
+		private static string[] testPaths = new string[] {
+			"LogoPic/3DSSZLogoBig.png",
+			"PHZ/Sound/advance.ogg",
+			"dcef3/widevinecdmadapter.dll"
+		};
+
+		private static string[] files;
+		private static TestTask[] tasks;
+		private static int progress;
+		private static bool isUseThreadPool;
+		private static int runTimes;
+		private static float totalBundleTime;
+		private static float totalFileSystemTime;
+
+		private static Mutex progressMutex;
+		private static ManualResetEvent doneSignal;
 
 		public static void Main (string[] args)
 		{
-			if (args.Length < 1) {
-				Console.WriteLine ("See help");
+			if (args.Length < 3) {
+				Console.WriteLine ("Usage: BundlrTest <PACK_FILE> <ACTUAL_DIR>> <RUN_TIMES> [t]");
 				return;
 			}
 
 			string filePath = args [0];
+			ActualDirRoot = args [1];
+			runTimes = int.Parse (args [2]);
+			isUseThreadPool = args.Length >= 4 && args[3] == "t" ? true : false;
 
-			string id = "test";
+			Console.WriteLine (string.Format ("Loading bundle '{0}' as '{1}'", filePath, BundleId));
+			BundleManager.Instance.Load (BundleId, filePath);
+			Console.WriteLine (string.Format ("Is bundle ‘{0}’ loaded? --> {1}", BundleId, BundleManager.Instance.Has (BundleId)));
 
-			BundleManager.Instance.Load (id, filePath);
-			Console.WriteLine (string.Format ("Has Bundle {0}? -->\t{1}", id, BundleManager.Instance.Has (id)));
-//			BundleManager.Instance [id].ShowAll ();
+			progressMutex = new Mutex (false, "progress");
 
-			var fileList = BundleManager.Instance [id].FileList;
-			long totalBundleTicks = 0;
-			long totalFileSystemTicks = 0;
-			for (int i = 0; i < fileList.Length; i++) {
-				var testPath = fileList [i];
-				Console.CursorLeft = 0;
-				Console.Write (string.Format ("Processing file {0} / {1}", i, fileList.Length));
-				TestData (id, testPath, ref totalBundleTicks, ref totalFileSystemTicks);
+			files = BundleManager.Instance [BundleId].FileList;
+			tasks = new TestTask[files.Length];
+			doneSignal = new ManualResetEvent (false);
+
+			for (int i = 0; i < runTimes; i++) {
+				Console.WriteLine (">>> Running benchmark #" + (i + 1));
+				RunOne ();
 			}
-			long usPerTick = (1000L * 1000L * 1000L) / Stopwatch.Frequency;
-			Console.WriteLine (string.Format ("\r\nAvg. Bundlr: {0}μs, Avg. FileSystem: {1}μs", 
-				totalBundleTicks * usPerTick / 1000f / fileList.Length, 
-				totalFileSystemTicks * usPerTick / 1000f / fileList.Length));
+
+			Console.WriteLine ("============================");
+			Console.WriteLine (string.Format ("Final Avg. Bundlr Time: {0}μs", totalBundleTime / runTimes));
+			Console.WriteLine (string.Format ("Final Avg. FileSystem Time: {0}μs", totalFileSystemTime / runTimes));
 		}
 
-		private static void TestData (string bundleId, string testPath, 
-		                              ref long totalBundleTicks, 
-		                              ref long totalFileSystemTicks)
+		private static void RunOne()
 		{
-			Stopwatch timer = new Stopwatch ();
-			timer.Restart ();
-			var data1 = BundleManager.Instance [bundleId].Get (testPath);
-			timer.Stop ();
-			totalBundleTicks += timer.ElapsedTicks;
+			progress = 0;
+			doneSignal.Reset ();
+			for (int i = 0; i < files.Length; i++) {
+				var testPath = files [i];
+				var t = new TestTask (BundleId, testPath);
+				tasks [i] = t;
+				if (!isUseThreadPool)
+					RunInSingleThread (t);
+				else
+					RunInThreadPool (t);
+			}
 
-			var f = new FileInfo (dirRoot + testPath);
-			timer.Restart ();
-			byte[] data2;
-			using (var ms = new MemoryStream ()) {
-				using (var fs = f.OpenRead ()) {
-					Utils.Stream2Stream (fs, ms, fs.Length);
-				}
-				data2 = ms.ToArray ();
-			}
-			timer.Stop ();
-			totalFileSystemTicks += timer.ElapsedTicks;
+			if (isUseThreadPool)
+				doneSignal.WaitOne ();
 
-			bool isDataSame = true;
-			if (data1.Length != data2.Length) {
-				isDataSame = false;
-			} else {
-				for (int i = 0; i < data1.Length; i++) {
-					if (data1 [i] != data2 [i]) {
-						isDataSame = false;
-						break;
-					}
-				}
-			}
-//			Console.WriteLine ("data1 == data2? " + isDataSame);
-			if (!isDataSame) {
-				Console.WriteLine (string.Format ("Data mismatch: {0}", testPath));
-			}
+			OutputRunStatistics ();
 		}
-	}
+
+		private static void RunInSingleThread (TestTask task)
+		{
+			task.Run ();
+			UpdateProgress ();
+		}
+
+		private static void RunInThreadPool (TestTask task)
+		{
+			ThreadPool.QueueUserWorkItem (task.ThreadCallback);
+		}
+
+		public static void UpdateProgress ()
+		{
+			progressMutex.WaitOne ();
+			progress++;
+			Console.CursorLeft = 0;
+			Console.Write (string.Format ("Processing file {0} / {1}", progress, files.Length));
+			if (progress == files.Length)
+				doneSignal.Set ();
+			progressMutex.ReleaseMutex ();
+		}
+
+		private static void OutputRunStatistics ()
+		{
+			long runBundleTicks = 0;
+			long runFileSystemTicks = 0;
+			foreach (var t in tasks) {
+				runBundleTicks += t.bundleTicks;
+				runFileSystemTicks += t.fileSystemTicks;
+			}
+
+			long usPerTick = (1000L * 1000L * 1000L) / Stopwatch.Frequency;
+
+			float runBundleTime = runBundleTicks * usPerTick / 1000f / files.Length;
+			float runFileSystemTime = runFileSystemTicks * usPerTick / 1000f / files.Length;
+
+			totalBundleTime += runBundleTime;
+			totalFileSystemTime += runFileSystemTime;
+
+			Console.WriteLine (string.Format ("\r\nAvg. Bundlr Time: {0}μs, Avg. FileSystem Time: {1}μs", 
+				runBundleTime, runFileSystemTime));
+		}
+	};
 }
