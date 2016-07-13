@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Linq;
 
 namespace Bundlr
 {
@@ -18,6 +19,12 @@ namespace Bundlr
 		private int HeaderLen {
 			get {
 				return MetaLen + sizeof(int);
+			}
+		}
+
+		public string[] FileList {
+			get {
+				return dictMetadata.Keys.ToArray ();
 			}
 		}
 
