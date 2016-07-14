@@ -8,7 +8,7 @@ namespace BundlrTest
 {
 	class MainClass
 	{
-		public static string ActualDirRoot = Utils.Repath ("~/HJD/");
+		public static string ActualDirRoot = Utils.Repath ("~/test/");
 		const string BundleId = "test";
 
 		private static string[] testPaths = new string[] {
@@ -21,7 +21,7 @@ namespace BundlrTest
 		private static TestTask[] tasks;
 		private static int progress;
 		private static bool isUseThreadPool;
-		private static int runTimes;
+		private static int runTimes = 1;
 		private static float totalBundleTime;
 		private static float totalFileSystemTime;
 
@@ -39,6 +39,8 @@ namespace BundlrTest
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
 			isUseThreadPool = args.Length >= 4 && args[3] == "t" ? true : false;
+
+//			string filePath = "~/test.blr";
 
 			Console.WriteLine (string.Format ("Loading bundle '{0}' as '{1}'", filePath, BundleId));
 			BundleManager.Instance.Load (BundleId, filePath);

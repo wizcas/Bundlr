@@ -1,52 +1,90 @@
 ﻿using System;
 using System.IO;
 using Bundlr;
+using System.Collections.Generic;
 
 namespace Bundlr
 {
-	public class PackingFile
+	internal class PackingFileCollection : IEnumerable<PackingFile>
 	{
-		public FileInfo fileInfo;
-		public FileMeta metadata;
+		private List<PackingFile> files = new List<PackingFile> ();
+		private Dictionary<string, PackingFile> validationDict = new Dictionary<string, PackingFile> ();
 
-		public PackingFile (FileInfo fileInfo, string relativePath)
-		{
-			this.fileInfo = fileInfo;
-			this.metadata = new FileMeta(relativePath, fileInfo.Length);
+		internal int Count {
+			get {
+				return files.Count;
+			}
 		}
 
-		/// <summary>
-		/// 生成元数据并通过制定的BinaryWriter写入到流中
-		/// </summary>
-		/// <returns>下一个文件的起始数据位置，用于写到下一个文件的元数据中</returns>
-		/// <param name="wtr">写入到指定流的BinaryWriter</param>
-		/// <param name="pos">该文件在元数据中记录的数据起始位置</param>
-		public long GenerateMetadata (BinaryWriter wtr, long pos)
+		internal void Add (string relativePath, FileInfo fileInfo)
 		{
-			metadata.pos = pos;
-			metadata.Serialize (wtr);
-			return pos + metadata.length;
+			Add (new PackingFile (relativePath, fileInfo));
 		}
 
-		/// <summary>
-		/// 打包文件数据到输出流
-		/// </summary>
-		/// <param name="output">要写入的输出流</param>
-		public void Pack (Stream output)
+		internal void Add (PackingFile file)
 		{
-			if (!fileInfo.Exists) {
-				Console.WriteLine (string.Format ("File '{0}' not exists", metadata.relativePath));
+			if (!file.fileInfo.Exists) {
+				Console.WriteLine (string.Format ("Ignore: file '{0}' doesn't exists", file.fileInfo.FullName));
 				return;
 			}
-				
-			using (FileStream fs = fileInfo.Open (FileMode.Open)) {
-				Utils.Stream2Stream (fs, output, fs.Length);
+			PackingFile conflictFile = null;
+			if (validationDict.ContainsKey (file.relativePath)) {
+				Console.WriteLine (string.Format ("Conflict: '{0}' is overwritten with '{1}'", file.relativePath, file.fileInfo.FullName));
+				conflictFile = validationDict [file.relativePath];
 			}
+			if (conflictFile != null)
+				files.Remove (conflictFile);
+			files.Add (file);
+			validationDict [file.relativePath] = file;
 		}
 
-		public override string ToString ()
+		internal bool Remove (string relativePath)
 		{
-			return metadata.relativePath;
+			if (!validationDict.ContainsKey (relativePath)) {
+				return false;
+			}
+
+			var file = validationDict [relativePath];
+			validationDict.Remove (relativePath);
+			return files.Remove (file);
+		}
+
+		internal void Clear ()
+		{
+			files.Clear ();
+			validationDict.Clear ();
+		}
+
+		#region IEnumerable implementation
+
+		public IEnumerator<PackingFile> GetEnumerator ()
+		{
+			return files.GetEnumerator ();
+		}
+
+		#endregion
+
+		#region IEnumerable implementation
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator ()
+		{
+			return files.GetEnumerator ();
+		}
+
+		#endregion
+	}
+
+	internal class PackingFile
+	{
+		internal string relativePath;
+		internal FileInfo fileInfo;
+		internal FileMeta metadata;
+
+		internal PackingFile (string relativePath, FileInfo fileInfo)
+		{
+			this.relativePath = relativePath.ToLower ();
+			this.fileInfo = fileInfo;
+			this.metadata = null;
 		}
 	}
 }

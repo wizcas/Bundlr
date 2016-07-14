@@ -21,38 +21,38 @@ namespace Bundlr
 		public long pos{ get; internal set; }
 
 		/// <summary>
-		/// 数据长度
+		/// 数据大小
 		/// </summary>
 		/// <value>The length.</value>
-		public long length{ get; internal set; }
+		public long size{ get; internal set; }
 
-		public FileMeta (string relPath, long length)
+		public FileMeta (string relPath, long size)
 		{
 			relativePath = relPath;
 			pos = -1;
-			this.length = length;
+			this.size = size;
 		}
 
 		public FileMeta (string relPath, long pos, long length)
 		{
 			this.relativePath = relPath;
 			this.pos = pos;
-			this.length = length;
+			this.size = length;
 		}
 
-		public void Serialize (BinaryWriter wtr)
+		public void Serialize(Stream stream)
 		{
-			wtr.Write (relativePath);
-			wtr.Write (pos);
-			wtr.Write (length);
-			wtr.Flush ();
+			stream.Write (relativePath);
+			stream.Write (pos);
+			stream.Write (size);
+			stream.Flush ();
 		}
 
-		public static FileMeta Deserialize (BinaryReader rdr)
+		public static FileMeta Deserialize(Stream stream)
 		{
-			string relPath = rdr.ReadString ();
-			long pos = rdr.ReadInt64 ();
-			long length = rdr.ReadInt64 ();
+			string relPath = stream.ReadString ();
+			long pos = stream.ReadInt64 ();
+			long length = stream.ReadInt64 ();
 			return new FileMeta (relPath, pos, length);
 		}
 	}

@@ -9,6 +9,9 @@ namespace BundlrPacker
 	class MainClass
 	{
 		private static string rootPath;
+		private static List<string> ignoreFileList = new List<string>(){
+			".DS_Store"
+		};
 
 		public static void PrintHelp ()
 		{
@@ -44,27 +47,27 @@ namespace BundlrPacker
 			timer.Reset ();
 			timer.Start ();
 
-			List<PackingFile> files = new List<PackingFile> ();
-			WalkDir (di, files);
-
 			Packer packer = new Packer (Utils.Repath (outPath));
-			packer.Pack (files);
+
+			WalkDir (di, packer);
+			packer.Pack ();
 
 			timer.Stop ();
-			Console.WriteLine ("{0} files are packed. ({1}ms)", files.Count, timer.ElapsedMilliseconds);
+			Console.WriteLine ("{0} files are packed. ({1}ms)", packer.FilesCount, timer.ElapsedMilliseconds);
 		}
 
-		public static void WalkDir (DirectoryInfo di, List<PackingFile> files, Packer packer)
+		public static void WalkDir (DirectoryInfo di, Packer packer)
 		{
 			if (!di.Exists)
 				return;
 			foreach (var fsi in di.GetFileSystemInfos()) {
 				if (fsi is DirectoryInfo)
-					WalkDir (fsi as DirectoryInfo, files, packer);
+					WalkDir (fsi as DirectoryInfo, packer);
 				else if (fsi is FileInfo) {
 					FileInfo fi = fsi as FileInfo;
-					//string relativePath = fi.FullName.Replace (rootPath, string.Empty).Replace ("\\", Constants.PathSeparator);
-					//files.Add (new PackingFile (fi, relativePath));
+					if (ignoreFileList.Contains (fi.Name))
+						continue;
+					Console.WriteLine (fi.FullName);
 					packer.AddFile(fi, FileFullPath2RelativePath(fi));
 				}
 			}

@@ -10,21 +10,18 @@ namespace Bundlr
 	{
 		private Dictionary<string, FileMeta> dictMetadata = new Dictionary<string, FileMeta> ();
 		private FileStream fs;
-		private BinaryReader rdr;
 
 		public Action<string> onDisposed;
 
 		public string Id { get ; private set; }
 
-		public int MetaLen { get; private set; }
+		public Version Version { get; private set; }
+
+		public long DataStartOffset{ get; private set; }
 
 		internal string FilePath{ get; private set; }
 
-		private int HeaderLen {
-			get {
-				return MetaLen + sizeof(int);
-			}
-		}
+		private int headerLen;
 
 		public string[] FileList {
 			get {
@@ -46,7 +43,6 @@ namespace Bundlr
 		{
 			FilePath = filePath;
 			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read);
-			rdr = new BinaryReader (fs, Encoding.UTF8);
 			LoadMetadata ();
 		}
 
@@ -54,10 +50,13 @@ namespace Bundlr
 		{
 			lock (fs) {
 				fs.Seek (0, SeekOrigin.Begin);
-				MetaLen = rdr.ReadInt32 ();
+				headerLen = fs.ReadInt32 () + sizeof(int);
 
-				while (fs.Position < HeaderLen) {
-					var fm = FileMeta.Deserialize (rdr);
+				Version = Version.Deserialize (fs);
+				DataStartOffset = fs.ReadInt64 ();
+
+				while (fs.Position < headerLen) {
+					var fm = FileMeta.Deserialize (fs);
 					dictMetadata [fm.relativePath] = fm;
 				}
 			}
@@ -89,14 +88,15 @@ namespace Bundlr
 			lock (fs) {
 				try {
 					// 计算新起始位置和当前流指针位置的偏差值
-					long newPos = HeaderLen + meta.pos;
+					long newPos = DataStartOffset + meta.pos;
 					long offset2Current = newPos - fs.Position;
 					// 如果新起始位置在别处，则根据与当前指针位置的偏差值移动指针
 					if (offset2Current != 0)
 						fs.Seek (offset2Current, SeekOrigin.Current);
 				
 					using (MemoryStream ms = new MemoryStream ()) {
-						Utils.Stream2Stream (fs, ms, meta.length);
+//						Utils.Stream2Stream (fs, ms, meta.length);
+						ms.WriteFromStream (fs, meta.size);
 						return ms.ToArray ();
 					}
 				} catch (Exception e) {
@@ -112,10 +112,6 @@ namespace Bundlr
 				if (fs != null) {
 					fs.Dispose ();
 					fs = null;
-				}
-				if (rdr != null) {
-					rdr.Dispose ();
-					rdr = null;
 				}
 				dictMetadata.Clear ();
 				if (onDisposed != null) {
