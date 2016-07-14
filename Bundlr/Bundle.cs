@@ -42,7 +42,7 @@ namespace Bundlr
 		private Bundle (string filePath)
 		{
 			FilePath = filePath;
-			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read);
+			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
 			LoadMetadata ();
 		}
 
