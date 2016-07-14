@@ -9,16 +9,14 @@ namespace BundlrTest
 {
 	public class TestTask
 	{
-		private string bundleId;
 		private string relPath;
 		private Stopwatch timer;
 
 		public long bundleTicks;
 		public long fileSystemTicks;
 
-		public TestTask (string bundleId, string relPath)
+		public TestTask (string relPath)
 		{
-			this.bundleId = bundleId;
 			this.relPath = relPath;
 			timer = new Stopwatch ();
 		}
@@ -26,7 +24,10 @@ namespace BundlrTest
 		public void Run()
 		{
 			timer.Restart ();
-			var data1 = BundleManager.Instance [bundleId].Get (relPath);
+//			var data1 = BundleManager.Instance [bundleId].Get (relPath);
+			var bf = Bundles.Open (relPath);
+			var data1 = new byte[(int)bf.Size];
+			bf.Read (data1, 0, 0, (int)bf.Size);
 			timer.Stop ();
 			bundleTicks += timer.ElapsedTicks;
 

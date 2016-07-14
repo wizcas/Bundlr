@@ -36,11 +36,12 @@
     <Compile Include="FileMeta.cs" />
     <Compile Include="Bundle.cs" />
     <Compile Include="Utils.cs" />
-    <Compile Include="BundleManager.cs" />
     <Compile Include="Packer.cs" />
     <Compile Include="PackingFile.cs" />
     <Compile Include="StreamExtension.cs" />
     <Compile Include="Version.cs" />
+    <Compile Include="BundleFile.cs" />
+    <Compile Include="Bundles.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

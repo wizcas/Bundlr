@@ -11,9 +11,9 @@ namespace Bundlr
 		private Dictionary<string, FileMeta> dictMetadata = new Dictionary<string, FileMeta> ();
 		private FileStream fs;
 
-		public Action<string> onDisposed;
+		public Action<Bundle> onDisposed;
 
-		public string Id { get ; private set; }
+		public string Uid{ get; private set; }
 
 		public Version Version { get; private set; }
 
@@ -29,13 +29,13 @@ namespace Bundlr
 			}
 		}
 
-		internal static Bundle Load (string id, string filePath)
+		internal static Bundle Load (string filePath)
 		{
 			filePath = Utils.Repath (filePath);
 			if (!File.Exists (filePath))
 				throw new ArgumentException ("Cannot file file: " + filePath);
 			var ret = new Bundle (filePath);
-			ret.Id = id;
+			ret.Uid = Guid.NewGuid ().ToString ();
 			return ret;
 		}
 
@@ -75,12 +75,17 @@ namespace Bundlr
 			return dictMetadata.ContainsKey (relativePath);
 		}
 
-		public byte[] Get (string relativePath)
+		public FileMeta GetMetadata (string relativePath)
 		{
 			if (!Has (relativePath))
 				return null;
 
-			FileMeta meta = dictMetadata [relativePath];
+			return dictMetadata [relativePath];
+		}
+
+		public byte[] Get (string relativePath)
+		{
+			FileMeta meta = GetMetadata (relativePath);
 
 			if (meta == null)
 				return null;
@@ -95,7 +100,6 @@ namespace Bundlr
 						fs.Seek (offset2Current, SeekOrigin.Current);
 				
 					using (MemoryStream ms = new MemoryStream ()) {
-//						Utils.Stream2Stream (fs, ms, meta.length);
 						ms.WriteFromStream (fs, meta.size);
 						return ms.ToArray ();
 					}
@@ -103,6 +107,44 @@ namespace Bundlr
 					Console.WriteLine ("Extracting data error: " + e);
 					return null;
 				}
+			}
+		}
+
+		public void Read (FileMeta meta, byte[] dst, int dstStartIndex, int readFilePos, int readSize)
+		{
+			if (meta == null)
+				throw new ArgumentNullException ("meta");
+
+			if (dst == null)
+				throw new ArgumentNullException ("dst");
+
+			if (dstStartIndex < 0)
+				throw new ArgumentException ("Start writing position of the target array must >= 0");
+
+			if (readFilePos < 0)
+				throw new ArgumentException ("Start reading position of the file must >= 0");
+
+			if (readSize < 0)
+				throw new ArgumentException ("The reading size must >= 0");
+
+			if (dst.Length - dstStartIndex < readSize) {
+				throw new ArgumentException ("Not enough space in target byte array for readSize " + readSize);
+			}
+
+			if (readFilePos + readSize > meta.size) {
+				throw new ArgumentException ("Trying to read beyond the EOF");
+			}
+
+			lock (fs) {
+				// 计算新的读取位置
+				long newPos = DataStartOffset + meta.pos + readFilePos;
+				// 移动指针到读取位置
+				long offset2Current = newPos - fs.Position;
+				if (offset2Current != 0) {
+					fs.Seek (offset2Current, SeekOrigin.Current);
+				}
+
+				fs.Read (dst, dstStartIndex, readSize);
 			}
 		}
 
@@ -115,7 +157,7 @@ namespace Bundlr
 				}
 				dictMetadata.Clear ();
 				if (onDisposed != null) {
-					onDisposed (Id);
+					onDisposed (this);
 					onDisposed = null;
 				}
 			}

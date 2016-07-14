@@ -9,7 +9,6 @@ namespace BundlrTest
 	class MainClass
 	{
 		public static string ActualDirRoot = Utils.Repath ("~/test/");
-		const string BundleId = "test";
 
 		private static string[] testPaths = new string[] {
 			"LogoPic/3DSSZLogoBig.png",
@@ -42,13 +41,12 @@ namespace BundlrTest
 
 //			string filePath = "~/test.blr";
 
-			Console.WriteLine (string.Format ("Loading bundle '{0}' as '{1}'", filePath, BundleId));
-			BundleManager.Instance.Load (BundleId, filePath);
-			Console.WriteLine (string.Format ("Is bundle ‘{0}’ loaded? --> {1}", BundleId, BundleManager.Instance.Has (BundleId)));
+			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
+			Bundles.Load(filePath);
 
 			progressMutex = new Mutex (false, "progress");
 
-			files = BundleManager.Instance [BundleId].FileList;
+			files = Bundles.FileList;
 			tasks = new TestTask[files.Length];
 			doneSignal = new ManualResetEvent (false);
 
@@ -68,7 +66,7 @@ namespace BundlrTest
 			doneSignal.Reset ();
 			for (int i = 0; i < files.Length; i++) {
 				var testPath = files [i];
-				var t = new TestTask (BundleId, testPath);
+				var t = new TestTask (testPath);
 				tasks [i] = t;
 				if (!isUseThreadPool)
 					RunInSingleThread (t);
