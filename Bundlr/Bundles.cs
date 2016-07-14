@@ -52,7 +52,7 @@ namespace Bundlr
 			}
 		}
 
-		public static BundleFile Open(string relativePath)
+		public static BundleFile File(string relativePath)
 		{
 			if (!instance.relpath2Bundle.ContainsKey (relativePath)) {
 				return null;

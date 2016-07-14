@@ -24,8 +24,7 @@ namespace BundlrTest
 		public void Run()
 		{
 			timer.Restart ();
-//			var data1 = BundleManager.Instance [bundleId].Get (relPath);
-			var bf = Bundles.Open (relPath);
+			var bf = Bundles.File (relPath);
 			var data1 = new byte[(int)bf.Size];
 			bf.Read (data1, 0, 0, (int)bf.Size);
 			timer.Stop ();

@@ -83,33 +83,6 @@ namespace Bundlr
 			return dictMetadata [relativePath];
 		}
 
-		public byte[] Get (string relativePath)
-		{
-			FileMeta meta = GetMetadata (relativePath);
-
-			if (meta == null)
-				return null;
-
-			lock (fs) {
-				try {
-					// 计算新起始位置和当前流指针位置的偏差值
-					long newPos = DataStartOffset + meta.pos;
-					long offset2Current = newPos - fs.Position;
-					// 如果新起始位置在别处，则根据与当前指针位置的偏差值移动指针
-					if (offset2Current != 0)
-						fs.Seek (offset2Current, SeekOrigin.Current);
-				
-					using (MemoryStream ms = new MemoryStream ()) {
-						ms.WriteFromStream (fs, meta.size);
-						return ms.ToArray ();
-					}
-				} catch (Exception e) {
-					Console.WriteLine ("Extracting data error: " + e);
-					return null;
-				}
-			}
-		}
-
 		public void Read (FileMeta meta, byte[] dst, int dstStartIndex, int readFilePos, int readSize)
 		{
 			if (meta == null)

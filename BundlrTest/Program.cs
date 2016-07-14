@@ -3,6 +3,8 @@ using Bundlr;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Text;
+using System.Linq;
 
 namespace BundlrTest
 {
@@ -23,6 +25,9 @@ namespace BundlrTest
 		private static int runTimes = 1;
 		private static float totalBundleTime;
 		private static float totalFileSystemTime;
+		private static float totalFileSizeInMB;
+		private static float totalBundleAccSpeed;
+		private static float totalFileSystemAccSpeed;
 
 		private static Mutex progressMutex;
 		private static ManualResetEvent doneSignal;
@@ -37,16 +42,27 @@ namespace BundlrTest
 			string filePath = args [0];
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
-			isUseThreadPool = args.Length >= 4 && args[3] == "t" ? true : false;
+			isUseThreadPool = args.Length >= 4 && args [3] == "t" ? true : false;
 
 //			string filePath = "~/test.blr";
 
 			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
-			Bundles.Load(filePath);
+			Bundles.Load (filePath);
 
 			progressMutex = new Mutex (false, "progress");
 
 			files = Bundles.FileList;
+			foreach (var file in files) {
+				totalFileSizeInMB += Bundles.File (file).Size;
+			}
+			totalFileSizeInMB /= 1024 * 1024;
+			Console.WriteLine ("Total file size: {0}MB", totalFileSizeInMB);
+
+			totalBundleAccSpeed = 0;
+			totalBundleTime = 0;
+			totalFileSystemAccSpeed = 0;
+			totalFileSystemTime = 0;
+
 			tasks = new TestTask[files.Length];
 			doneSignal = new ManualResetEvent (false);
 
@@ -55,12 +71,17 @@ namespace BundlrTest
 				RunOne ();
 			}
 
-			Console.WriteLine ("============================");
-			Console.WriteLine (string.Format ("Final Avg. Bundlr Time: {0}μs", totalBundleTime / runTimes));
-			Console.WriteLine (string.Format ("Final Avg. FileSystem Time: {0}μs", totalFileSystemTime / runTimes));
+			Console.WriteLine ("\n\n\n=============== Performance Report ==============");
+			Console.WriteLine ("[Final Avg. File Access Speed]");
+			Console.WriteLine ("Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes);
+			Console.WriteLine ("[Final Avg. File Process Time]");
+			Console.WriteLine ("Bundlr: {0:N3}μs, FileSystem: {1:N3}μs", totalBundleTime / runTimes, totalFileSystemTime / runTimes);
+
+			Console.WriteLine ("\n\n\n========= Duplicated Relative Path Test =========");
+			TestDuplicatedPath ();
 		}
 
-		private static void RunOne()
+		private static void RunOne ()
 		{
 			progress = 0;
 			doneSignal.Reset ();
@@ -111,16 +132,50 @@ namespace BundlrTest
 				runFileSystemTicks += t.fileSystemTicks;
 			}
 
-			long usPerTick = (1000L * 1000L * 1000L) / Stopwatch.Frequency;
+			float usPerTick = (1000L * 1000L) / (float)Stopwatch.Frequency;
 
-			float runBundleTime = runBundleTicks * usPerTick / 1000f / files.Length;
-			float runFileSystemTime = runFileSystemTicks * usPerTick / 1000f / files.Length;
+			float runBundleTime = runBundleTicks * usPerTick;
+			float runFileSystemTime = runFileSystemTicks * usPerTick;
 
-			totalBundleTime += runBundleTime;
-			totalFileSystemTime += runFileSystemTime;
+			float runBundleAccSpeed = totalFileSizeInMB / runBundleTime * 1000f;
+			float runFileSystemAccSpeed = totalFileSizeInMB / runFileSystemTime * 1000f;
 
-			Console.WriteLine (string.Format ("\r\nAvg. Bundlr Time: {0}μs, Avg. FileSystem Time: {1}μs", 
-				runBundleTime, runFileSystemTime));
+			totalBundleAccSpeed += runBundleAccSpeed;
+			totalFileSystemAccSpeed += runFileSystemAccSpeed;
+
+			Console.WriteLine ("[Avg. File Access Speed] Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s",
+				runBundleAccSpeed, runFileSystemAccSpeed);
+
+			float avgBundleTime = runBundleTime / files.Length;
+			float avgFileSystemTime = runFileSystemTime / files.Length;
+
+			totalBundleTime += avgBundleTime;
+			totalFileSystemTime += avgFileSystemTime;
+
+			Console.WriteLine ("\r\n[Avg. File Process Time] Bundlr: {0}μs, FileSystem: {1}μs", 
+				avgBundleTime, avgFileSystemTime);	
 		}
-	};
+
+		private static void TestDuplicatedPath ()
+		{
+			Console.WriteLine (">> In currently loaded Bundle");
+
+			string s = ReadTestTxtString ();
+			Console.WriteLine ("  text.txt is now : {0}", s);
+
+			Console.WriteLine (">> Loading Bundle ~/test.blr");
+			Bundles.Load (Utils.Repath ("~/test.blr"));
+
+			s = ReadTestTxtString ();
+			Console.WriteLine ("  text.txt is now : {0}", s);
+		}
+
+		private static string ReadTestTxtString ()
+		{
+			var f = Bundles.File ("test.txt");
+			var data = new byte[(int)f.Size];
+			f.Read (data, 0, 0, (int)f.Size);
+			return Encoding.UTF8.GetString (data);
+		}
+	}
 }
