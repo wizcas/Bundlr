@@ -40,8 +40,8 @@
     <Compile Include="PackingFile.cs" />
     <Compile Include="StreamExtension.cs" />
     <Compile Include="Version.cs" />
-    <Compile Include="BundleFile.cs" />
     <Compile Include="Bundles.cs" />
+    <Compile Include="ResourceFile.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

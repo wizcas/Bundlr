@@ -24,16 +24,13 @@ namespace Bundlr
 		internal void Add (PackingFile file)
 		{
 			if (!file.fileInfo.Exists) {
-				Console.WriteLine (string.Format ("Ignore: file '{0}' doesn't exists", file.fileInfo.FullName));
-				return;
+				throw new FileNotFoundException ("Failed to add a packing file", file.fileInfo.FullName);
 			}
-			PackingFile conflictFile = null;
 			if (validationDict.ContainsKey (file.relativePath)) {
-				Console.WriteLine (string.Format ("Conflict: '{0}' is overwritten with '{1}'", file.relativePath, file.fileInfo.FullName));
-				conflictFile = validationDict [file.relativePath];
+				throw new ArgumentException (string.Format ("Conflict: the relative path '{0}' is registered in packing list",
+					file.relativePath));
 			}
-			if (conflictFile != null)
-				files.Remove (conflictFile);
+
 			files.Add (file);
 			validationDict [file.relativePath] = file;
 		}
