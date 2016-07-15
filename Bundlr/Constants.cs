@@ -4,6 +4,8 @@ namespace Bundlr
 {
 	public static class Constants
 	{
+		public const int NumOfBytesAlignment = 8;
+
 		/// <summary>
 		/// 数据包中相对路径使用的路径分隔符
 		/// </summary>

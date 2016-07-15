@@ -37,10 +37,9 @@ namespace Bundlr
 			output.Flush ();
 		}
 
-		public const int NumOfBytesAlignment = 8;
 		public static long GetByteAlignedPos(long pos)
 		{
-			return (long)Math.Ceiling ((double)pos / NumOfBytesAlignment) * (long)NumOfBytesAlignment;
+			return (long)Math.Ceiling ((double)pos / Constants.NumOfBytesAlignment) * (long)Constants.NumOfBytesAlignment;
 		}
 	}
 }
