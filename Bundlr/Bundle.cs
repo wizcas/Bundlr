@@ -6,24 +6,23 @@ using System.Linq;
 
 namespace Bundlr
 {
-	public class Bundle : IDisposable
+	internal class Bundle : IDisposable
 	{
 		private Dictionary<string, FileMeta> dictMetadata = new Dictionary<string, FileMeta> ();
 		private FileStream fs;
+		private int headerLen;
+		private long dataStartOffset;
 
-		public Action<Bundle> onDisposed;
+		internal Action<Bundle> onDisposed;
 
-		public string Uid{ get; private set; }
+		internal string Uid{ get; private set; }
 
-		public Version Version { get; private set; }
-
-		public long DataStartOffset{ get; private set; }
+		internal Version Version { get; private set; }
 
 		internal string FilePath{ get; private set; }
 
-		private int headerLen;
 
-		public string[] FileList {
+		internal string[] FileList {
 			get {
 				return dictMetadata.Keys.ToArray ();
 			}
@@ -53,7 +52,7 @@ namespace Bundlr
 				headerLen = fs.ReadInt32 () + sizeof(int);
 
 				Version = Version.Deserialize (fs);
-				DataStartOffset = fs.ReadInt64 ();
+				dataStartOffset = fs.ReadInt64 ();
 
 				while (fs.Position < headerLen) {
 					var fm = FileMeta.Deserialize (fs);
@@ -62,20 +61,12 @@ namespace Bundlr
 			}
 		}
 
-		public void ShowAll ()
-		{
-			Console.WriteLine ("[Files in bundle]");
-			foreach (var kv in dictMetadata) {
-				Console.WriteLine (string.Format ("\t{0}: {1}, {2}", kv.Key, kv.Value.pos, kv.Value.pos));
-			}
-		}
-
-		public bool Has (string relativePath)
+		internal bool Has (string relativePath)
 		{
 			return dictMetadata.ContainsKey (relativePath);
 		}
 
-		public FileMeta GetMetadata (string relativePath)
+		internal FileMeta GetMetadata (string relativePath)
 		{
 			if (!Has (relativePath))
 				return null;
@@ -83,7 +74,7 @@ namespace Bundlr
 			return dictMetadata [relativePath];
 		}
 
-		public void Read (FileMeta meta, byte[] dst, int dstStartIndex, int readFilePos, int readSize)
+		internal void Read (FileMeta meta, byte[] dst, int dstStartIndex, int readFilePos, int readSize)
 		{
 			if (meta == null)
 				throw new ArgumentNullException ("meta");
@@ -110,7 +101,7 @@ namespace Bundlr
 
 			lock (fs) {
 				// 计算新的读取位置
-				long newPos = DataStartOffset + meta.pos + readFilePos;
+				long newPos = dataStartOffset + meta.pos + readFilePos;
 				// 移动指针到读取位置
 				long offset2Current = newPos - fs.Position;
 				if (offset2Current != 0) {

@@ -7,7 +7,7 @@ namespace Bundlr
 		private Bundle bundle;
 		private FileMeta metadata;
 
-		public BundleFile (Bundle bundle, string relativePath)
+		internal BundleFile (string relativePath, Bundle bundle)
 		{
 			this.bundle = bundle;
 			metadata = bundle.GetMetadata(relativePath);
@@ -15,6 +15,11 @@ namespace Bundlr
 
 		public long Size {
 			get{ return metadata.size; }
+		}
+
+		public string RelativePath
+		{
+			get{ return metadata.relativePath; }
 		}
 
 		public void Read(byte[] dst, int dstStartIndex, int readFilePos, int readSize)

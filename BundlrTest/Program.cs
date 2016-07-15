@@ -11,6 +11,7 @@ namespace BundlrTest
 	class MainClass
 	{
 		public static string ActualDirRoot = Utils.Repath ("~/test/");
+		public static readonly float usPerTick = (1000L * 1000L) / (float)Stopwatch.Frequency;
 
 		private static string[] testPaths = new string[] {
 			"LogoPic/3DSSZLogoBig.png",
@@ -79,6 +80,8 @@ namespace BundlrTest
 
 			Console.WriteLine ("\n\n\n========= Duplicated Relative Path Test =========");
 			TestDuplicatedPath ();
+
+			Bundles.DisposeAll ();
 		}
 
 		private static void RunOne ()
@@ -127,23 +130,23 @@ namespace BundlrTest
 		{
 			long runBundleTicks = 0;
 			long runFileSystemTicks = 0;
+			float runBundleAccSpeed = 0;
+			float runFileSystemAccSpeed = 0;
+
 			foreach (var t in tasks) {
 				runBundleTicks += t.bundleTicks;
 				runFileSystemTicks += t.fileSystemTicks;
+				runBundleAccSpeed += t.bundleAccSpeed;
+				runFileSystemAccSpeed += t.fileSystemAccSpeed;
 			}
-
-			float usPerTick = (1000L * 1000L) / (float)Stopwatch.Frequency;
 
 			float runBundleTime = runBundleTicks * usPerTick;
 			float runFileSystemTime = runFileSystemTicks * usPerTick;
 
-			float runBundleAccSpeed = totalFileSizeInMB / runBundleTime * 1000f;
-			float runFileSystemAccSpeed = totalFileSizeInMB / runFileSystemTime * 1000f;
-
 			totalBundleAccSpeed += runBundleAccSpeed;
 			totalFileSystemAccSpeed += runFileSystemAccSpeed;
 
-			Console.WriteLine ("[Avg. File Access Speed] Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s",
+			Console.WriteLine ("\r\n[Avg. File Access Speed] Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s",
 				runBundleAccSpeed, runFileSystemAccSpeed);
 
 			float avgBundleTime = runBundleTime / files.Length;
@@ -152,7 +155,7 @@ namespace BundlrTest
 			totalBundleTime += avgBundleTime;
 			totalFileSystemTime += avgFileSystemTime;
 
-			Console.WriteLine ("\r\n[Avg. File Process Time] Bundlr: {0}μs, FileSystem: {1}μs", 
+			Console.WriteLine ("[Avg. File Process Time] Bundlr: {0}μs, FileSystem: {1}μs", 
 				avgBundleTime, avgFileSystemTime);	
 		}
 
@@ -172,7 +175,7 @@ namespace BundlrTest
 
 		private static string ReadTestTxtString ()
 		{
-			var f = Bundles.File ("test.txt");
+			var f = Bundles.File ("teSt.txt");
 			var data = new byte[(int)f.Size];
 			f.Read (data, 0, 0, (int)f.Size);
 			return Encoding.UTF8.GetString (data);

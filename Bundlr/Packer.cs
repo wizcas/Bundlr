@@ -13,7 +13,6 @@ namespace Bundlr
 		public static readonly Version CurrentVersion = new Version (1, 0, 0);
 
 		public string bundlePathWithName;
-		public byte verMajor, verMinor, verRevision;
 		private PackingFileCollection packingFiles = new PackingFileCollection ();
 
 		public int FilesCount {

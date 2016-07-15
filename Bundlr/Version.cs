@@ -7,9 +7,9 @@ namespace Bundlr
 	{
 		public byte major, minor, revision;
 
-		public int Size
+		internal int Size
 		{
-			get{ return 3; }
+			get{ return sizeof(byte) * 3; }
 		}
 
 		public Version(byte major, byte minor, byte revision)

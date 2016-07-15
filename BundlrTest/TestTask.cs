@@ -14,6 +14,8 @@ namespace BundlrTest
 
 		public long bundleTicks;
 		public long fileSystemTicks;
+		public float bundleAccSpeed;
+		public float fileSystemAccSpeed;
 
 		public TestTask (string relPath)
 		{
@@ -25,10 +27,13 @@ namespace BundlrTest
 		{
 			timer.Restart ();
 			var bf = Bundles.File (relPath);
+			var size = bf.Size / (float)(1024 * 1024); // unit in MB
+
 			var data1 = new byte[(int)bf.Size];
 			bf.Read (data1, 0, 0, (int)bf.Size);
 			timer.Stop ();
-			bundleTicks += timer.ElapsedTicks;
+			bundleTicks = timer.ElapsedTicks;
+			bundleAccSpeed = size / (bundleTicks * MainClass.usPerTick / 1000f); // unit in MB/s
 
 			var f = new FileInfo (Path.Combine(MainClass.ActualDirRoot, relPath));
 			timer.Restart ();
@@ -40,7 +45,8 @@ namespace BundlrTest
 				data2 = ms.ToArray ();
 			}
 			timer.Stop ();
-			fileSystemTicks += timer.ElapsedTicks;
+			fileSystemTicks = timer.ElapsedTicks;
+			fileSystemAccSpeed = size / (fileSystemTicks * MainClass.usPerTick / 1000f); // unit in MB/s
 
 			bool isDataSame = true;
 			if (data1.Length != data2.Length) {

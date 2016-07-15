@@ -6,15 +6,11 @@ namespace Bundlr
 {
 	public class Bundles
 	{
-		#region Nesting
-
-		#endregion
-
 		private static Bundles instance = new Bundles ();
 		private static bool isDisposingAll = false;
 
 		private Dictionary<string, Bundle> relpath2Bundle = new Dictionary<string, Bundle> ();
-		private List<Bundle> bundles = new List<Bundle>();
+		private List<Bundle> loadedBundles = new List<Bundle> ();
 		private Dictionary<string, int> bundleCounters = new Dictionary<string, int> ();
 
 
@@ -31,20 +27,6 @@ namespace Bundlr
 			}
 		}
 
-		public static void DisposeAll ()
-		{
-			lock (instance) {
-				isDisposingAll = true;
-				foreach (var bundle in instance.bundles) {
-					bundle.Dispose ();
-				}
-				instance.relpath2Bundle.Clear ();
-				instance.bundles.Clear ();
-				instance.bundleCounters.Clear ();
-				isDisposingAll = false;
-			}
-		}
-
 		public static void Load (string filePath)
 		{
 			lock (instance) {
@@ -52,18 +34,34 @@ namespace Bundlr
 			}
 		}
 
-		public static BundleFile File(string relativePath)
+		public static BundleFile File (string relativePath)
 		{
+			relativePath = relativePath.ToLower ();
 			if (!instance.relpath2Bundle.ContainsKey (relativePath)) {
 				return null;
 			}
 
-			return new BundleFile (instance.relpath2Bundle [relativePath], relativePath);
+			return new BundleFile (relativePath, instance.relpath2Bundle [relativePath]);
+		}
+
+		public static void DisposeAll ()
+		{
+			lock (instance) {
+				isDisposingAll = true;
+				foreach (var bundle in instance.loadedBundles) {
+					bundle.Dispose ();
+				}
+				instance.relpath2Bundle.Clear ();
+				instance.loadedBundles.Clear ();
+				instance.bundleCounters.Clear ();
+				isDisposingAll = false;
+			}
 		}
 
 		#endregion
 
 		#region Bundle Organizing
+
 		private void LoadBundle (string filePath)
 		{
 			try {
@@ -74,7 +72,9 @@ namespace Bundlr
 				}
 
 				bundle.onDisposed += OnBundleDisposed;
-				bundles.Add(bundle);
+				lock (loadedBundles) {
+					loadedBundles.Add (bundle);
+				}
 			} catch (ArgumentException e) {
 				Console.WriteLine ("Failed to load bundle: {0}", e);
 			}
@@ -119,13 +119,30 @@ namespace Bundlr
 			}
 		}
 
-		private void OnBundleDisposed(Bundle bundle)
+		private void OnBundleDisposed (Bundle bundle)
 		{
 			if (isDisposingAll)
 				return;
 
-			bundles.Remove (bundle);
+			lock (loadedBundles) {
+				loadedBundles.Remove (bundle);
+			}
+			lock (bundleCounters) {
+				bundleCounters.Remove (bundle.Uid);
+			}
+			lock (relpath2Bundle) {
+				foreach (string file in bundle.FileList) {
+					if (!relpath2Bundle.ContainsKey (file))
+						continue;
+
+					var b = relpath2Bundle [file];
+					if (b == bundle) {
+						relpath2Bundle.Remove (file);
+					}
+				}
+			}
 		}
+
 		#endregion
 	}
 }
