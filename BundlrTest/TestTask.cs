@@ -26,7 +26,7 @@ namespace BundlrTest
 		public void Run()
 		{
 			timer.Restart ();
-			var bf = Bundles.File (relPath);
+			var bf = ResourceFile.Open (relPath);
 			var size = bf.Size / (float)(1024 * 1024); // unit in MB
 
 			var data1 = new byte[(int)bf.Size];

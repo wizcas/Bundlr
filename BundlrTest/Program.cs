@@ -56,7 +56,7 @@ namespace BundlrTest
 
 			files = Bundles.FileList;
 			foreach (var file in files) {
-				totalFileSizeInMB += Bundles.File (file).Size;
+				totalFileSizeInMB += ResourceFile.Open (file).Size;
 			}
 			totalFileSizeInMB /= 1024 * 1024;
 			Console.WriteLine ("Total file size: {0}MB", totalFileSizeInMB);
@@ -177,7 +177,7 @@ namespace BundlrTest
 
 		private static string ReadTestTxtString ()
 		{
-			var f = Bundles.File ("teSt.txt");
+			var f = ResourceFile.Open ("teSt.txt");
 			var data = new byte[(int)f.Size];
 			f.Read (data, 0, 0, (int)f.Size);
 			return Encoding.UTF8.GetString (data);

@@ -34,7 +34,7 @@ namespace Bundlr
 			}
 		}
 
-		public static BundleFile File (string relativePath)
+		internal static BundleFile File (string relativePath)
 		{
 			relativePath = relativePath.ToLower ();
 			if (!instance.relpath2Bundle.ContainsKey (relativePath)) {
