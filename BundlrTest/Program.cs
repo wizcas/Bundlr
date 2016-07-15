@@ -44,6 +44,8 @@ namespace BundlrTest
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
 			isUseThreadPool = args.Length >= 4 && args [3] == "t" ? true : false;
+			ThreadPool.SetMinThreads (2, 100);
+			ThreadPool.SetMaxThreads (10, 200);
 
 //			string filePath = "~/test.blr";
 
@@ -155,7 +157,7 @@ namespace BundlrTest
 			totalBundleTime += avgBundleTime;
 			totalFileSystemTime += avgFileSystemTime;
 
-			Console.WriteLine ("[Avg. File Process Time] Bundlr: {0}μs, FileSystem: {1}μs", 
+			Console.WriteLine ("[Avg. File Process Time] Bundlr: {0:N3}μs, FileSystem: {1:N3}μs", 
 				avgBundleTime, avgFileSystemTime);	
 		}
 
