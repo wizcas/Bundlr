@@ -117,7 +117,7 @@ namespace Bundlr
 				throw new FileNotFoundException (string.Format ("Disk file '{0}' is not found", AbsolutePath));
 
 			fileInfo = new FileInfo (AbsolutePath);
-			fs = new FileStream (AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			fs = fileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
 		}
 
 		public override void Read (byte[] dst, int dstStartIndex, int readFilePos, int readSize)
