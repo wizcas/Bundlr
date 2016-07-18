@@ -37,17 +37,17 @@ namespace BundlrTest
 		public static void Main (string[] args)
 		{
 			if (args.Length < 3) {
-				Console.WriteLine ("Usage: BundlrTest <PACK_FILE> <ACTUAL_DIR>> <RUN_TIMES> [t]");
+				Console.WriteLine ("Usage: BundlrTest <PACK_FILE> <ACTUAL_DIR>> <RUN_TIMES> [c] [t] [r]");
 				return;
 			}
 
 			string filePath = args [0];
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
-			isMultiThreads = args.Length >= 4 && args [3] == "t" ? true : false;
-			bool isRandomFiles = true;
 
-			Bundles.IsCacheBundle = false;
+			Bundles.IsCacheBundle = args.Length >= 4 && args [3] == "c" ? true : false;
+			isMultiThreads = args.Length >= 5 && args [4] == "t" ? true : false;
+			bool isRandomFiles = args.Length >= 6 && args [5] == "r" ? true : false;
 
 //			string filePath = "~/test.blr";
 
