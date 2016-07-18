@@ -64,7 +64,7 @@ namespace Bundlr
 
 		#endregion
 
-		private static Dictionary<string, FileCounterItem> fileCounters = new Dictionary<string, FileCounterItem>();
+		private static Dictionary<string, FileCounterItem> fileCounters = new Dictionary<string, FileCounterItem> ();
 
 		private FileInfo fileInfo;
 		private string relativePath;
@@ -88,7 +88,7 @@ namespace Bundlr
 			}
 		}
 
-		internal static DiskFile OpenFile(string relativePath)
+		internal static DiskFile OpenFile (string relativePath)
 		{
 			lock (fileCounters) {
 				if (fileCounters.ContainsKey (relativePath)) {
