@@ -41,6 +41,29 @@ namespace Bundlr
 		{
 			return (long)Math.Ceiling ((double)pos / Constants.NumOfBytesAlignment) * (long)Constants.NumOfBytesAlignment;
 		}
+
+		public static void CheckReadParameters(byte[] dst, int dstStartIndex, int readFilePos, int readSize, long fileSize)
+		{
+			if (dst == null)
+				throw new ArgumentNullException ("dst");
+
+			if (dstStartIndex < 0)
+				throw new ArgumentException ("Start writing position of the target array must >= 0");
+
+			if (readFilePos < 0)
+				throw new ArgumentException ("Start reading position of the file must >= 0");
+
+			if (readSize < 0)
+				throw new ArgumentException ("The reading size must >= 0");
+
+			if (dst.Length - dstStartIndex < readSize) {
+				throw new ArgumentException ("Not enough space in target byte array for readSize " + readSize);
+			}
+
+			if (readFilePos + readSize > fileSize) {
+				throw new ArgumentException ("Trying to read beyond the EOF");
+			}
+		}
 	}
 }
 

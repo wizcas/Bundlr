@@ -79,25 +79,7 @@ namespace Bundlr
 			if (meta == null)
 				throw new ArgumentNullException ("meta");
 
-			if (dst == null)
-				throw new ArgumentNullException ("dst");
-
-			if (dstStartIndex < 0)
-				throw new ArgumentException ("Start writing position of the target array must >= 0");
-
-			if (readFilePos < 0)
-				throw new ArgumentException ("Start reading position of the file must >= 0");
-
-			if (readSize < 0)
-				throw new ArgumentException ("The reading size must >= 0");
-
-			if (dst.Length - dstStartIndex < readSize) {
-				throw new ArgumentException ("Not enough space in target byte array for readSize " + readSize);
-			}
-
-			if (readFilePos + readSize > meta.size) {
-				throw new ArgumentException ("Trying to read beyond the EOF");
-			}
+			Utils.CheckReadParameters (dst, dstStartIndex, readFilePos, readSize, meta.size);
 
 			lock (fs) {
 				// 计算新的读取位置
