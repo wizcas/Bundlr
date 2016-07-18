@@ -31,6 +31,7 @@ namespace BundlrTest
 
 			var data1 = new byte[(int)bf.Size];
 			bf.Read (data1, 0, 0, (int)bf.Size);
+			bf.Close ();
 			timer.Stop ();
 			bundleTicks = timer.ElapsedTicks;
 			bundleAccSpeed = size / (bundleTicks * MainClass.usPerTick / 1000f); // unit in MB/s

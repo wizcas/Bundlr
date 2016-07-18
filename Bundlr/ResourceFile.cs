@@ -50,6 +50,12 @@ namespace Bundlr
 		{
 			bundle.Read (metadata, dst, dstStartIndex, readFilePos, readSize);
 		}
+
+		public override void Close ()
+		{
+//			if (Bundles.Caching == BundleCaching.Optimized)
+				bundle.CloseFile ();
+		}
 	}
 
 	public class DiskFile : ResourceFile

@@ -12,7 +12,10 @@ namespace Bundlr
 		private FileStream fs;
 		private int headerLen;
 		private long dataStartOffset;
+
 		private object fsSync = new object ();
+		private int fsCounter = 0;
+		private object fsCounterSync = new object ();
 
 		internal Action<Bundle> onDisposed;
 
@@ -42,29 +45,67 @@ namespace Bundlr
 		private Bundle (string filePath)
 		{
 			FilePath = filePath;
-			if (Bundles.IsCacheBundle)
-				OpenFileStream ();
 			LoadMetadata ();
+			if (Bundles.Caching == BundleCaching.AlwaysCached)
+				OpenFileStream ();
 		}
 
 		private void OpenFileStream ()
 		{
-			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
+			lock (fsSync) {
+				fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
+			}
 		}
 
 		private void CloseFileStream ()
 		{
-			if (fs == null)
+			lock (fsSync) {
+				if (fs == null)
+					return;
+				fs.Close ();
+				fs = null;
+			}
+		}
+
+		internal void OpenFile ()
+		{
+			if (Bundles.Caching == BundleCaching.AlwaysCached)
 				return;
-			fs.Close ();
-			fs = null;
+
+			lock (fsCounterSync) {
+				if (Bundles.Caching == BundleCaching.None || fsCounter <= 0) {
+					OpenFileStream ();
+					fsCounter = 1;
+				} else {
+					fsCounter++;
+				}
+//				Console.WriteLine ("fsCounter(open): " + fsCounter);
+			}
+		}
+
+		internal void CloseFile ()
+		{
+			if (Bundles.Caching == BundleCaching.AlwaysCached)
+				return;
+
+			if (Bundles.Caching == BundleCaching.Optimized) {
+				lock (fsCounterSync) {
+					fsCounter--;
+//					Console.WriteLine ("fsCounter(close): " + fsCounter);
+					if (fsCounter <= 0) {
+						CloseFileStream ();
+						fsCounter = 0;
+					}
+				}
+			} else {
+				CloseFileStream ();
+			}
 		}
 
 		private void LoadMetadata ()
 		{
 			lock (fsSync) {
-				if (!Bundles.IsCacheBundle)
-					OpenFileStream ();
+				OpenFileStream ();
 				fs.Seek (0, SeekOrigin.Begin);
 				headerLen = fs.ReadInt32 () + sizeof(int);
 
@@ -75,8 +116,7 @@ namespace Bundlr
 					var fm = FileMeta.Deserialize (fs);
 					dictMetadata [fm.relativePath] = fm;
 				}
-				if (!Bundles.IsCacheBundle)
-					CloseFileStream ();
+				CloseFileStream ();
 			}
 		}
 
@@ -101,8 +141,7 @@ namespace Bundlr
 			Utils.CheckReadParameters (dst, dstStartIndex, readFilePos, readSize, meta.size);
 
 			lock (fsSync) {
-				if (!Bundles.IsCacheBundle)
-					OpenFileStream ();
+				
 				// 计算新的读取位置
 				long newPos = dataStartOffset + meta.pos + readFilePos;
 				// 移动指针到读取位置
@@ -112,21 +151,18 @@ namespace Bundlr
 				}
 
 				fs.Read (dst, dstStartIndex, readSize);
-
-				if (!Bundles.IsCacheBundle)
+				if (Bundles.Caching == BundleCaching.None)
 					CloseFileStream ();
 			}
 		}
 
 		public void Dispose ()
 		{
-			lock (fsSync) {
-				CloseFileStream ();
-				dictMetadata.Clear ();
-				if (onDisposed != null) {
-					onDisposed (this);
-					onDisposed = null;
-				}
+			CloseFileStream ();
+			dictMetadata.Clear ();
+			if (onDisposed != null) {
+				onDisposed (this);
+				onDisposed = null;
 			}
 		}
 	}

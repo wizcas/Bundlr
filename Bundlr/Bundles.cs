@@ -6,12 +6,8 @@ namespace Bundlr
 {
 	public class Bundles
 	{
-		/// <summary>
-		/// 是否将数据包的文件流一直缓存在内存中
-		/// 若为TRUE，则直到数据包被释放前文件流对象都会存在
-		/// 若为FALSE，则每次读取数据包时都将创建新的文件流，读取后立即释放
-		/// </summary>
-		public static bool IsCacheBundle = false;
+		public static BundleCaching Caching;
+
 		private static Bundles instance = new Bundles ();
 		private static bool isDisposingAll = false;
 
@@ -47,7 +43,10 @@ namespace Bundlr
 				return null;
 			}
 
-			return new BundleFile (relativePath, instance.relpath2Bundle [relativePath]);
+			var bundle = instance.relpath2Bundle [relativePath];
+//			if (Caching == BundleCaching.Optimized)
+				bundle.OpenFile ();
+			return new BundleFile (relativePath, bundle);
 		}
 
 		public static void DisposeAll ()
@@ -154,3 +153,9 @@ namespace Bundlr
 	}
 }
 
+public enum BundleCaching
+{
+	None,
+	Optimized,
+	AlwaysCached
+}

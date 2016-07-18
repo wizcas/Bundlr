@@ -15,12 +15,6 @@ namespace BundlrTest
 		public static string ActualDirRoot = Utils.Repath ("~/test/");
 		public static readonly float usPerTick = (1000L * 1000L) / (float)Stopwatch.Frequency;
 
-		private static string[] testPaths = new string[] {
-			"LogoPic/3DSSZLogoBig.png",
-			"PHZ/Sound/advance.ogg",
-			"dcef3/widevinecdmadapter.dll"
-		};
-
 		private static string[] files;
 		private static TestTask[] tasks;
 		private static int progress;
@@ -45,11 +39,18 @@ namespace BundlrTest
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
 
-			Bundles.IsCacheBundle = args.Length >= 4 && args [3] == "c" ? true : false;
-			isMultiThreads = args.Length >= 5 && args [4] == "t" ? true : false;
-			bool isRandomFiles = args.Length >= 6 && args [5] == "r" ? true : false;
+			isMultiThreads = args.Contains("t") ? true : false;
+			bool isRandomFiles = args.Contains("r") ? true : false;
+
+			if (args.Contains ("c"))
+				Bundles.Caching = BundleCaching.AlwaysCached;
+			else if (args.Contains ("o"))
+				Bundles.Caching = BundleCaching.Optimized;
+			else
+				Bundles.Caching = BundleCaching.None;
 
 //			string filePath = "~/test.blr";
+//			bool isRandomFiles = true;
 
 			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
 			Bundles.Load (filePath);
@@ -62,7 +63,9 @@ namespace BundlrTest
 				files = ShuffleArray (files);
 
 			foreach (var file in files) {
-				totalFileSizeInMB += ResourceFile.Open (file).Size;
+				var f = ResourceFile.Open (file);
+				totalFileSizeInMB += f.Size;
+				f.Close ();
 			}
 			totalFileSizeInMB /= 1024 * 1024;
 			Console.WriteLine ("Total file size: {0}MB", totalFileSizeInMB);
