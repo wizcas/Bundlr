@@ -52,6 +52,8 @@ namespace BundlrTest
 //			string filePath = "~/test.blr";
 //			bool isRandomFiles = true;
 
+			Console.WriteLine (">>>> Bundlr is running in [{0}] mem-mode >>>>", Bundles.Caching);
+
 			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
 			Bundles.Load (filePath);
 

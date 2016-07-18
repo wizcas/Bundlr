@@ -44,8 +44,7 @@ namespace Bundlr
 			}
 
 			var bundle = instance.relpath2Bundle [relativePath];
-//			if (Caching == BundleCaching.Optimized)
-				bundle.OpenFile ();
+			bundle.AddFileRef ();
 			return new BundleFile (relativePath, bundle);
 		}
 

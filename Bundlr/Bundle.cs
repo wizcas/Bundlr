@@ -67,13 +67,13 @@ namespace Bundlr
 			}
 		}
 
-		internal void OpenFile ()
+		internal void AddFileRef ()
 		{
-			if (Bundles.Caching == BundleCaching.AlwaysCached)
+			if (Bundles.Caching == BundleCaching.AlwaysCached || Bundles.Caching == BundleCaching.None)
 				return;
 
 			lock (fsCounterSync) {
-				if (Bundles.Caching == BundleCaching.None || fsCounter <= 0) {
+				if (fsCounter <= 0) {
 					OpenFileStream ();
 					fsCounter = 1;
 				} else {
@@ -83,22 +83,18 @@ namespace Bundlr
 			}
 		}
 
-		internal void CloseFile ()
+		internal void RemoveFileRef ()
 		{
-			if (Bundles.Caching == BundleCaching.AlwaysCached)
+			if (Bundles.Caching == BundleCaching.AlwaysCached || Bundles.Caching == BundleCaching.None)
 				return;
-
-			if (Bundles.Caching == BundleCaching.Optimized) {
-				lock (fsCounterSync) {
-					fsCounter--;
+			
+			lock (fsCounterSync) {
+				fsCounter--;
 //					Console.WriteLine ("fsCounter(close): " + fsCounter);
-					if (fsCounter <= 0) {
-						CloseFileStream ();
-						fsCounter = 0;
-					}
+				if (fsCounter <= 0) {
+					CloseFileStream ();
+					fsCounter = 0;
 				}
-			} else {
-				CloseFileStream ();
 			}
 		}
 
@@ -141,6 +137,8 @@ namespace Bundlr
 			Utils.CheckReadParameters (dst, dstStartIndex, readFilePos, readSize, meta.size);
 
 			lock (fsSync) {
+				if (Bundles.Caching == BundleCaching.None)
+					OpenFileStream ();
 				
 				// 计算新的读取位置
 				long newPos = dataStartOffset + meta.pos + readFilePos;
