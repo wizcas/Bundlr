@@ -5,6 +5,8 @@ using System.IO;
 using System.Threading;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BundlrTest
 {
@@ -22,7 +24,7 @@ namespace BundlrTest
 		private static string[] files;
 		private static TestTask[] tasks;
 		private static int progress;
-		private static bool isUseThreadPool;
+		private static bool isMultiThreads;
 		private static int runTimes = 1;
 		private static float totalBundleTime;
 		private static float totalFileSystemTime;
@@ -31,7 +33,6 @@ namespace BundlrTest
 		private static float totalFileSystemAccSpeed;
 
 		private static Mutex progressMutex;
-		private static ManualResetEvent doneSignal;
 
 		public static void Main (string[] args)
 		{
@@ -43,9 +44,10 @@ namespace BundlrTest
 			string filePath = args [0];
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
-			isUseThreadPool = args.Length >= 4 && args [3] == "t" ? true : false;
-			ThreadPool.SetMinThreads (2, 100);
-			ThreadPool.SetMaxThreads (10, 200);
+			isMultiThreads = args.Length >= 4 && args [3] == "t" ? true : false;
+			bool isRandomFiles = true;
+
+			Bundles.IsCacheBundle = false;
 
 //			string filePath = "~/test.blr";
 
@@ -55,6 +57,10 @@ namespace BundlrTest
 			progressMutex = new Mutex (false, "progress");
 
 			files = Bundles.FileList;
+
+			if (isRandomFiles)
+				files = ShuffleArray (files);
+
 			foreach (var file in files) {
 				totalFileSizeInMB += ResourceFile.Open (file).Size;
 			}
@@ -67,7 +73,6 @@ namespace BundlrTest
 			totalFileSystemTime = 0;
 
 			tasks = new TestTask[files.Length];
-			doneSignal = new ManualResetEvent (false);
 
 			for (int i = 0; i < runTimes; i++) {
 				Console.WriteLine (">>> Running benchmark #" + (i + 1));
@@ -86,35 +91,43 @@ namespace BundlrTest
 			Bundles.DisposeAll ();
 		}
 
+		private static string[] ShuffleArray (string[] files)
+		{
+			Random rnd = new Random (DateTime.Now.Millisecond);
+			List<string> ret = new List<string> ();
+			List<string> shuffled = new List<string> (files);
+			while (shuffled.Count > 0) {
+				int i = rnd.Next (0, shuffled.Count);
+				ret.Add (shuffled [i]);
+				shuffled.RemoveAt (i);
+			}
+			return ret.ToArray ();
+		}
+
 		private static void RunOne ()
 		{
 			progress = 0;
-			doneSignal.Reset ();
+
+			List<Task> threadTasks = new List<Task> ();
+
 			for (int i = 0; i < files.Length; i++) {
 				var testPath = files [i];
 				var t = new TestTask (testPath);
 				tasks [i] = t;
-				if (!isUseThreadPool)
-					RunInSingleThread (t);
-				else
-					RunInThreadPool (t);
-			}
+				if (!isMultiThreads)
+					t.Run ();
+				else {
+					var tt = new Task (t.Run);
+					tt.Start ();
+					threadTasks.Add (tt);
 
-			if (isUseThreadPool)
-				doneSignal.WaitOne ();
+				}
+			}
+				
+			if (isMultiThreads)
+				Task.WaitAll (threadTasks.ToArray (), new TimeSpan (0, 1, 0));
 
 			OutputRunStatistics ();
-		}
-
-		private static void RunInSingleThread (TestTask task)
-		{
-			task.Run ();
-			UpdateProgress ();
-		}
-
-		private static void RunInThreadPool (TestTask task)
-		{
-			ThreadPool.QueueUserWorkItem (task.ThreadCallback);
 		}
 
 		public static void UpdateProgress ()
@@ -123,8 +136,7 @@ namespace BundlrTest
 			progress++;
 			Console.CursorLeft = 0;
 			Console.Write (string.Format ("Processing file {0} / {1}", progress, files.Length));
-			if (progress == files.Length)
-				doneSignal.Set ();
+
 			progressMutex.ReleaseMutex ();
 		}
 

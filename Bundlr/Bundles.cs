@@ -6,6 +6,12 @@ namespace Bundlr
 {
 	public class Bundles
 	{
+		/// <summary>
+		/// 是否将数据包的文件流一直缓存在内存中
+		/// 若为TRUE，则直到数据包被释放前文件流对象都会存在
+		/// 若为FALSE，则每次读取数据包时都将创建新的文件流，读取后立即释放
+		/// </summary>
+		public static bool IsCacheBundle = false;
 		private static Bundles instance = new Bundles ();
 		private static bool isDisposingAll = false;
 
@@ -65,6 +71,7 @@ namespace Bundlr
 		private void LoadBundle (string filePath)
 		{
 			try {
+
 				var bundle = Bundle.Load (filePath);
 
 				foreach (var file in bundle.FileList) {

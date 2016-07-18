@@ -12,6 +12,7 @@ namespace Bundlr
 		private FileStream fs;
 		private int headerLen;
 		private long dataStartOffset;
+		private object fsSync = new object ();
 
 		internal Action<Bundle> onDisposed;
 
@@ -41,13 +42,29 @@ namespace Bundlr
 		private Bundle (string filePath)
 		{
 			FilePath = filePath;
-			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
+			if (Bundles.IsCacheBundle)
+				OpenFileStream ();
 			LoadMetadata ();
+		}
+
+		private void OpenFileStream ()
+		{
+			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
+		}
+
+		private void CloseFileStream ()
+		{
+			if (fs == null)
+				return;
+			fs.Close ();
+			fs = null;
 		}
 
 		private void LoadMetadata ()
 		{
-			lock (fs) {
+			lock (fsSync) {
+				if (!Bundles.IsCacheBundle)
+					OpenFileStream ();
 				fs.Seek (0, SeekOrigin.Begin);
 				headerLen = fs.ReadInt32 () + sizeof(int);
 
@@ -58,6 +75,8 @@ namespace Bundlr
 					var fm = FileMeta.Deserialize (fs);
 					dictMetadata [fm.relativePath] = fm;
 				}
+				if (!Bundles.IsCacheBundle)
+					CloseFileStream ();
 			}
 		}
 
@@ -81,7 +100,9 @@ namespace Bundlr
 
 			Utils.CheckReadParameters (dst, dstStartIndex, readFilePos, readSize, meta.size);
 
-			lock (fs) {
+			lock (fsSync) {
+				if (!Bundles.IsCacheBundle)
+					OpenFileStream ();
 				// 计算新的读取位置
 				long newPos = dataStartOffset + meta.pos + readFilePos;
 				// 移动指针到读取位置
@@ -91,16 +112,16 @@ namespace Bundlr
 				}
 
 				fs.Read (dst, dstStartIndex, readSize);
+
+				if (!Bundles.IsCacheBundle)
+					CloseFileStream ();
 			}
 		}
 
 		public void Dispose ()
 		{
-			lock (fs) {
-				if (fs != null) {
-					fs.Dispose ();
-					fs = null;
-				}
+			lock (fsSync) {
+				CloseFileStream ();
 				dictMetadata.Clear ();
 				if (onDisposed != null) {
 					onDisposed (this);

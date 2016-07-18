@@ -23,7 +23,7 @@ namespace BundlrTest
 			timer = new Stopwatch ();
 		}
 
-		public void Run()
+		private void DoRun()
 		{
 			timer.Restart ();
 			var bf = ResourceFile.Open (relPath);
@@ -67,6 +67,11 @@ namespace BundlrTest
 		public void ThreadCallback(object context)
 		{
 			Run ();
+		}
+
+		public void Run()
+		{
+			DoRun ();
 			MainClass.UpdateProgress ();
 		}
 	}
