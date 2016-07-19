@@ -149,6 +149,7 @@ namespace Bundlr
 				}
 
 				fs.Read (dst, dstStartIndex, readSize);
+
 				if (Bundles.Caching == BundleCaching.None)
 					CloseFileStream ();
 			}
