@@ -42,6 +42,10 @@
     <Compile Include="Version.cs" />
     <Compile Include="Bundles.cs" />
     <Compile Include="ResourceFile.cs" />
+    <Compile Include="Diagnostic\Profiler.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="Diagnostic\" />
+  </ItemGroup>
 </Project>

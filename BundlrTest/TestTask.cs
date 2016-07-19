@@ -34,7 +34,13 @@ namespace BundlrTest
 			bf.Close ();
 			timer.Stop ();
 			bundleTicks = timer.ElapsedTicks;
-			bundleAccSpeed = size / (bundleTicks * MainClass.usPerTick / 1000f); // unit in MB/s
+			bundleAccSpeed = size / (bundleTicks * Profiler.secPerTick); // unit in MB/s
+
+//			Console.WriteLine ("\r\n{0}MB for {1} ticks ({2})s -> {3}MB/s",
+//				size, 
+//				bundleTicks, 
+//				bundleTicks * Profiler.secPerTick, 
+//				bundleAccSpeed);
 
 			var f = new FileInfo (Path.Combine(MainClass.ActualDirRoot, relPath));
 			timer.Restart ();
@@ -47,7 +53,7 @@ namespace BundlrTest
 			}
 			timer.Stop ();
 			fileSystemTicks = timer.ElapsedTicks;
-			fileSystemAccSpeed = size / (fileSystemTicks * MainClass.usPerTick / 1000f); // unit in MB/s
+			fileSystemAccSpeed = size / (fileSystemTicks * Profiler.secPerTick); // unit in MB/s
 
 			bool isDataSame = true;
 			if (data1.Length != data2.Length) {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Linq;
+using System.Threading;
 
 namespace Bundlr
 {
@@ -13,9 +14,7 @@ namespace Bundlr
 		private int headerLen;
 		private long dataStartOffset;
 
-		private object fsSync = new object ();
-		private int fsCounter = 0;
-		private object fsCounterSync = new object ();
+		private Mutex fsMutex = new Mutex (false);
 
 		internal Action<Bundle> onDisposed;
 
@@ -45,75 +44,30 @@ namespace Bundlr
 		private Bundle (string filePath)
 		{
 			FilePath = filePath;
+
+			fsMutex.WaitOne ();
+
 			LoadMetadata ();
 			if (Bundles.Caching == BundleCaching.AlwaysCached)
 				OpenFileStream ();
-		}
 
-		private void OpenFileStream ()
-		{
-			lock (fsSync) {
-				fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
-			}
-		}
-
-		private void CloseFileStream ()
-		{
-			lock (fsSync) {
-				if (fs == null)
-					return;
-				fs.Close ();
-				fs = null;
-			}
-		}
-
-		internal void AddFileRef ()
-		{
-			if (Bundles.Caching == BundleCaching.AlwaysCached || Bundles.Caching == BundleCaching.None)
-				return;
-
-			lock (fsCounterSync) {
-				if (fsCounter <= 0) {
-					OpenFileStream ();
-					fsCounter = 1;
-				} else {
-					fsCounter++;
-				}
-//				Console.WriteLine ("fsCounter(open): " + fsCounter);
-			}
-		}
-
-		internal void RemoveFileRef ()
-		{
-			if (Bundles.Caching == BundleCaching.AlwaysCached || Bundles.Caching == BundleCaching.None)
-				return;
-			
-			lock (fsCounterSync) {
-				fsCounter--;
-//					Console.WriteLine ("fsCounter(close): " + fsCounter);
-				if (fsCounter <= 0) {
-					CloseFileStream ();
-					fsCounter = 0;
-				}
-			}
+			fsMutex.ReleaseMutex ();
 		}
 
 		private void LoadMetadata ()
 		{
-			lock (fsSync) {
-				OpenFileStream ();
-				fs.Seek (0, SeekOrigin.Begin);
-				headerLen = fs.ReadInt32 () + sizeof(int);
+			OpenFileStream ();
+			fs.Seek (0, SeekOrigin.Begin);
+			headerLen = fs.ReadInt32 () + sizeof(int);
 
-				Version = Version.Deserialize (fs);
-				dataStartOffset = fs.ReadInt64 ();
+			Version = Version.Deserialize (fs);
+			dataStartOffset = fs.ReadInt64 ();
 
-				while (fs.Position < headerLen) {
-					var fm = FileMeta.Deserialize (fs);
-					dictMetadata [fm.relativePath] = fm;
-				}
-				CloseFileStream ();
+			while (fs.Position < headerLen) {
+				var fm = FileMeta.Deserialize (fs);
+				dictMetadata [fm.relativePath] = fm;
 			}
+			CloseFileStream ();
 		}
 
 		internal bool Has (string relativePath)
@@ -136,33 +90,60 @@ namespace Bundlr
 
 			Utils.CheckReadParameters (dst, dstStartIndex, readFilePos, readSize, meta.size);
 
-			lock (fsSync) {
-				if (Bundles.Caching == BundleCaching.None)
-					OpenFileStream ();
+			Profiler.StartSample ("wait one read");
+			fsMutex.WaitOne ();
+			Profiler.EndSample ("wait one read");
+
+			if (Bundles.Caching == BundleCaching.None)
+				OpenFileStream ();
 				
-				// 计算新的读取位置
-				long newPos = dataStartOffset + meta.pos + readFilePos;
-				// 移动指针到读取位置
-				long offset2Current = newPos - fs.Position;
-				if (offset2Current != 0) {
-					fs.Seek (offset2Current, SeekOrigin.Current);
-				}
-
-				fs.Read (dst, dstStartIndex, readSize);
-
-				if (Bundles.Caching == BundleCaching.None)
-					CloseFileStream ();
+			// 计算新的读取位置
+			long newPos = dataStartOffset + meta.pos + readFilePos;
+			// 移动指针到读取位置
+			long offset2Current = newPos - fs.Position;
+			if (offset2Current != 0) {
+				Profiler.StartSample ("seek");
+				fs.Seek (offset2Current, SeekOrigin.Current);
+				Profiler.EndSample ("seek");
 			}
+
+			fs.Read (dst, dstStartIndex, readSize);
+
+			if (Bundles.Caching == BundleCaching.None)
+				CloseFileStream ();
+
+			Profiler.StartSample ("release read");
+			fsMutex.ReleaseMutex ();
+			Profiler.EndSample ("release read");
 		}
 
 		public void Dispose ()
 		{
+			fsMutex.WaitOne ();
 			CloseFileStream ();
 			dictMetadata.Clear ();
+			fsMutex.ReleaseMutex ();
 			if (onDisposed != null) {
 				onDisposed (this);
 				onDisposed = null;
 			}
+		}
+
+		private void OpenFileStream ()
+		{
+			Profiler.StartSample ("open");
+			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
+			Profiler.EndSample ("open");
+		}
+
+		private void CloseFileStream ()
+		{
+			Profiler.StartSample ("close");
+			if (fs == null)
+				return;
+			fs.Close ();
+			fs = null;
+			Profiler.EndSample ("close");
 		}
 	}
 }

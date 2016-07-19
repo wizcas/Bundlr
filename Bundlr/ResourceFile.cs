@@ -50,11 +50,6 @@ namespace Bundlr
 		{
 			bundle.Read (metadata, dst, dstStartIndex, readFilePos, readSize);
 		}
-
-		public override void Close ()
-		{
-			bundle.RemoveFileRef ();
-		}
 	}
 
 	public class DiskFile : ResourceFile

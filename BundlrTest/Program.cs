@@ -13,7 +13,6 @@ namespace BundlrTest
 	class MainClass
 	{
 		public static string ActualDirRoot = Utils.Repath ("~/test/");
-		public static readonly float usPerTick = (1000L * 1000L) / (float)Stopwatch.Frequency;
 
 		private static string[] files;
 		private static TestTask[] tasks;
@@ -39,13 +38,11 @@ namespace BundlrTest
 			ActualDirRoot = args [1];
 			runTimes = int.Parse (args [2]);
 
-			isMultiThreads = args.Contains("t") ? true : false;
-			bool isRandomFiles = args.Contains("r") ? true : false;
+			isMultiThreads = args.Contains ("t") ? true : false;
+			bool isRandomFiles = args.Contains ("r") ? true : false;
 
 			if (args.Contains ("c"))
 				Bundles.Caching = BundleCaching.AlwaysCached;
-			else if (args.Contains ("o"))
-				Bundles.Caching = BundleCaching.Optimized;
 			else
 				Bundles.Caching = BundleCaching.None;
 
@@ -53,6 +50,7 @@ namespace BundlrTest
 //			bool isRandomFiles = true;
 
 			Console.WriteLine (">>>> Bundlr is running in [{0}] mem-mode >>>>", Bundles.Caching);
+			Console.WriteLine (">>>> Is random access? -> {0} >>>>", isRandomFiles);
 
 			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
 			Bundles.Load (filePath);
@@ -90,10 +88,18 @@ namespace BundlrTest
 			Console.WriteLine ("[Final Avg. File Process Time]");
 			Console.WriteLine ("Bundlr: {0:N3}μs, FileSystem: {1:N3}μs", totalBundleTime / runTimes, totalFileSystemTime / runTimes);
 
+
+			// Output to file
+			using (var s = new StreamWriter (Utils.Repath ("~/profile.txt"), true, Encoding.UTF8)) {
+				s.WriteLine (string.Format ("{0:N4}\t{1:N4}", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes));
+			}
+
 			Console.WriteLine ("\n\n\n========= Duplicated Relative Path Test =========");
 			TestDuplicatedPath ();
 
 			Bundles.DisposeAll ();
+
+			OutputProfiler ();
 		}
 
 		private static string[] ShuffleArray (string[] files)
@@ -159,15 +165,17 @@ namespace BundlrTest
 				runFileSystemAccSpeed += t.fileSystemAccSpeed;
 			}
 
-			float runBundleTime = runBundleTicks * usPerTick;
-			float runFileSystemTime = runFileSystemTicks * usPerTick;
+			float avgBundleAccSpeed = runBundleAccSpeed / files.Length;
+			float avgFileSystemAccSpeed = runFileSystemAccSpeed / files.Length;
 
-			totalBundleAccSpeed += runBundleAccSpeed;
-			totalFileSystemAccSpeed += runFileSystemAccSpeed;
+			totalBundleAccSpeed += avgBundleAccSpeed;
+			totalFileSystemAccSpeed += avgFileSystemAccSpeed;
 
 			Console.WriteLine ("\r\n[Avg. File Access Speed] Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s",
-				runBundleAccSpeed, runFileSystemAccSpeed);
+				avgBundleAccSpeed, avgFileSystemAccSpeed);
 
+			float runBundleTime = runBundleTicks * Profiler.usPerTick;
+			float runFileSystemTime = runFileSystemTicks * Profiler.usPerTick;
 			float avgBundleTime = runBundleTime / files.Length;
 			float avgFileSystemTime = runFileSystemTime / files.Length;
 
@@ -198,6 +206,11 @@ namespace BundlrTest
 			var data = new byte[(int)f.Size];
 			f.Read (data, 0, 0, (int)f.Size);
 			return Encoding.UTF8.GetString (data);
+		}
+
+		private static void OutputProfiler ()
+		{
+			Console.WriteLine (Profiler.OutputAll ());
 		}
 	}
 }

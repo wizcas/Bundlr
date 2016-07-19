@@ -44,7 +44,6 @@ namespace Bundlr
 			}
 
 			var bundle = instance.relpath2Bundle [relativePath];
-			bundle.AddFileRef ();
 			return new BundleFile (relativePath, bundle);
 		}
 
@@ -155,6 +154,5 @@ namespace Bundlr
 public enum BundleCaching
 {
 	None,
-	Optimized,
 	AlwaysCached
 }
