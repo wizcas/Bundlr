@@ -14,10 +14,6 @@ namespace Bundlr
 
 		private static Dictionary<string, Stopwatch> stopwatches = new Dictionary<string, Stopwatch> ();
 
-		//		public Profiler ()
-		//		{
-		//		}
-
 		private static Stopwatch CreateOrGetTimer (string key)
 		{
 			Stopwatch timer;

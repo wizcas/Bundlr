@@ -26,21 +26,25 @@ namespace Bundlr
 		/// <value>The length.</value>
 		public long size{ get; internal set; }
 
-		public FileMeta (string relPath, long size)
+		internal FileMeta (string relPath, long size)
 		{
 			relativePath = relPath;
 			pos = -1;
 			this.size = size;
 		}
 
-		public FileMeta (string relPath, long pos, long length)
+		internal FileMeta (string relPath, long pos, long length)
 		{
 			this.relativePath = relPath;
 			this.pos = pos;
 			this.size = length;
 		}
 
-		public void Serialize(Stream stream)
+		/// <summary>
+		/// 将元数据序列化到指定流
+		/// </summary>
+		/// <param name="stream">元数据写入的流</param>
+		internal void Serialize(Stream stream)
 		{
 			stream.Write (relativePath);
 			stream.Write (pos);
@@ -48,7 +52,11 @@ namespace Bundlr
 			stream.Flush ();
 		}
 
-		public static FileMeta Deserialize(Stream stream)
+		/// <summary>
+		/// 从指定流中反序列化元数据，并返回一个新的元数据对象
+		/// </summary>
+		/// <param name="stream">从中反序列化元数据的流</param>
+		internal static FileMeta Deserialize(Stream stream)
 		{
 			string relPath = stream.ReadString ();
 			long pos = stream.ReadInt64 ();

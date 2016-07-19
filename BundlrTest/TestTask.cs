@@ -31,26 +31,23 @@ namespace BundlrTest
 
 			var data1 = new byte[(int)bf.Size];
 			bf.Read (data1, 0, 0, (int)bf.Size);
+
 			bf.Close ();
 			timer.Stop ();
 			bundleTicks = timer.ElapsedTicks;
 			bundleAccSpeed = size / (bundleTicks * Profiler.secPerTick); // unit in MB/s
 
-//			Console.WriteLine ("\r\n{0}MB for {1} ticks ({2})s -> {3}MB/s",
-//				size, 
-//				bundleTicks, 
-//				bundleTicks * Profiler.secPerTick, 
-//				bundleAccSpeed);
-
 			var f = new FileInfo (Path.Combine(MainClass.ActualDirRoot, relPath));
 			timer.Restart ();
 			byte[] data2;
+			Profiler.StartSample ("read-f");
 			using (var ms = new MemoryStream ()) {
 				using (var fs = f.OpenRead ()) {
 					Utils.Stream2Stream (fs, ms, fs.Length);
 				}
 				data2 = ms.ToArray ();
 			}
+			Profiler.EndSample ("readFile");
 			timer.Stop ();
 			fileSystemTicks = timer.ElapsedTicks;
 			fileSystemAccSpeed = size / (fileSystemTicks * Profiler.secPerTick); // unit in MB/s

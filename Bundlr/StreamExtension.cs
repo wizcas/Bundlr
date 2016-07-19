@@ -4,8 +4,14 @@ using System.Text;
 
 namespace Bundlr
 {
+	/// <summary>
+	/// 流操作扩展类
+	/// </summary>
 	public static class StreamExtension
 	{
+		/// <summary>
+		/// 判断系统是否使用的是小端序
+		/// </summary>
 		private readonly static bool IsLittleEndian = BitConverter.IsLittleEndian;
 
 		private static byte[] UnifyBytesOrder (byte[] bytes)

@@ -24,16 +24,27 @@ namespace Bundlr
 			this.bundlePathWithName = bundlePathWithName;
 		}
 
+		/// <summary>
+		/// 添加一个打包文件
+		/// </summary>
+		/// <param name="fileInfo">文件信息</param>
+		/// <param name="relativePath">文件相对路径</param>
 		public void AddFile (FileInfo fileInfo, string relativePath)
 		{
 			packingFiles.Add (relativePath, fileInfo);
 		}
 
-		public void RemoveFile (string relativePath)
+		/// <summary>
+		/// 清除所有已添加的打包文件
+		/// </summary>
+		public void Clear()
 		{
-			packingFiles.Remove (relativePath);
+			packingFiles.Clear ();
 		}
 
+		/// <summary>
+		/// 执行打包
+		/// </summary>
 		public void Pack ()
 		{
 			using (FileStream fs = new FileStream (bundlePathWithName, FileMode.Create, FileAccess.Write)) {
@@ -60,6 +71,10 @@ namespace Bundlr
 			Console.WriteLine (string.Format ("Successfully packed to '{0}'.", bundlePathWithName));
 		}
 
+		/// <summary>
+		/// 生成打包文件的元数据
+		/// </summary>
+		/// <returns>打包文件元数据</returns>
 		private byte[] GenerateMetadata ()
 		{
 			Console.WriteLine ("Generating metadata...");
@@ -85,12 +100,22 @@ namespace Bundlr
 			}
 		}
 
+		/// <summary>
+		/// 计算包头长度
+		/// </summary>
+		/// <returns>包头长度</returns>
+		/// <param name="metaSize">打包文件元数据长度</param>
 		private int CalculateHeaderSize (int metaSize)
 		{
 			// 文件头总长度 = 包大小长度（int32) + 版本号长度（Version类定义）+ 数据起始位置长度（int64）+ 文件元数据长度（int32）
 			return sizeof(int) + CurrentVersion.Size + sizeof(long) + metaSize;
 		}
 
+		/// <summary>
+		/// 生成数据包信息
+		/// </summary>
+		/// <returns>数据包信息数据</returns>
+		/// <param name="dataStartOffset">Data start offset.</param>
 		private byte[] GenerateInfo (long dataStartOffset)
 		{
 			Console.WriteLine ("Generating file info...");
@@ -103,7 +128,11 @@ namespace Bundlr
 				return s.ToArray ();
 			}
 		}
-
+		/// <summary>
+		/// 依次将打包文件的文件数据写入数据包
+		/// </summary>
+		/// <param name="s">要写入的流</param>
+		/// <param name="startOffset">文件数据的起始写入位置</param>
 		private void WriteFileBytes (Stream s, long startOffset)
 		{
 			foreach (var file in packingFiles) {
