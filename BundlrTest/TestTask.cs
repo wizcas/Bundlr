@@ -23,8 +23,20 @@ namespace BundlrTest
 			timer = new Stopwatch ();
 		}
 
+		public void ThreadCallback(object context)
+		{
+			Run ();
+		}
+
+		public void Run()
+		{
+			DoRun ();
+			MainClass.UpdateProgress ();
+		}
+
 		private void DoRun()
 		{
+			// Get data1 from Bundle File
 			timer.Restart ();
 			float sizeInMB;
 			byte[] data1;
@@ -35,9 +47,11 @@ namespace BundlrTest
 			}
 
 			timer.Stop ();
+			// benchmark for data1
 			bundleTicks = timer.ElapsedTicks;
 			bundleAccSpeed = sizeInMB / (bundleTicks * Profiler.secPerTick); // unit in MB/s
 
+			// Get data2 from disk file
 			var f = new FileInfo (Path.Combine(MainClass.ActualDirRoot, relPath));
 			timer.Restart ();
 			byte[] data2;
@@ -50,9 +64,11 @@ namespace BundlrTest
 			}
 			Profiler.EndSample ("readFile");
 			timer.Stop ();
+			// benchmark for data2
 			fileSystemTicks = timer.ElapsedTicks;
 			fileSystemAccSpeed = sizeInMB / (fileSystemTicks * Profiler.secPerTick); // unit in MB/s
 
+			// Validate the consistency of data1 & data 2
 			bool isDataSame = true;
 			if (data1.Length != data2.Length) {
 				isDataSame = false;
@@ -67,17 +83,6 @@ namespace BundlrTest
 			if (!isDataSame) {
 				Console.WriteLine (string.Format ("\r\nData mismatch: {0}\r\n", relPath));
 			}
-		}
-
-		public void ThreadCallback(object context)
-		{
-			Run ();
-		}
-
-		public void Run()
-		{
-			DoRun ();
-			MainClass.UpdateProgress ();
 		}
 	}
 }
