@@ -49,21 +49,21 @@ namespace Bundlr
 		{
 			using (FileStream fs = new FileStream (bundlePathWithName, FileMode.Create, FileAccess.Write)) {
 				// All files' metadata
-				var metaBytes = GenerateMetadata ();
+				byte[] metaBytes = GenerateMetadata ();
 
-				// Calculate the size of bundle's header and the start position of file data
+				// Calculate the size of bundle's header and the start position of bundle's body (data part)
 				int headerSize = CalculateHeaderSize (metaBytes.Length);
-				long dataStartOffset = Utils.GetByteAlignedPos (headerSize);
+				long bodyBeginPos = Utils.GetByteAlignedPos (headerSize);
 
 				// Bundle's own info
-				var infoBytes = GenerateInfo (dataStartOffset);
+				byte[] infoBytes = GenerateInfo (bodyBeginPos);
 
 				fs.Write (headerSize - sizeof(int)); // Writes (info size + files' metadata size)
 				fs.Write (infoBytes, 0, infoBytes.Length); // Writes bundle's info
 				fs.Write (metaBytes, 0, metaBytes.Length); // Writes all files' metadata
 
 				// Write all files
-				WriteFileBytes (fs, dataStartOffset);
+				WriteFileBytes (fs, bodyBeginPos);
 
 				fs.Flush ();
 			}
@@ -115,15 +115,15 @@ namespace Bundlr
 		/// 生成数据包信息
 		/// </summary>
 		/// <returns>数据包信息数据</returns>
-		/// <param name="dataStartOffset">Data start offset.</param>
-		private byte[] GenerateInfo (long dataStartOffset)
+		/// <param name="dataStartOffset">数据包体部分起始位置</param>
+		private byte[] GenerateInfo (long bodyBeginPos)
 		{
 			Console.WriteLine ("Generating file info...");
 			using (MemoryStream s = new MemoryStream ()) {
 				//写入数据包版本号
 				CurrentVersion.Serialize (s);
 				//写入数据包起始位置
-				s.Write (dataStartOffset);
+				s.Write (bodyBeginPos);
 				s.Flush ();
 				return s.ToArray ();
 			}
@@ -132,12 +132,12 @@ namespace Bundlr
 		/// 依次将打包文件的文件数据写入数据包
 		/// </summary>
 		/// <param name="s">要写入的流</param>
-		/// <param name="startOffset">文件数据的起始写入位置</param>
-		private void WriteFileBytes (Stream s, long startOffset)
+		/// <param name="startOffset">包体数据的起始写入位置</param>
+		private void WriteFileBytes (Stream s, long bodyBeginPos)
 		{
 			foreach (var file in packingFiles) {
 				// 移动指针到指定文件数据的起始位置
-				long pos = file.metadata.pos + startOffset;
+				long pos = file.metadata.pos + bodyBeginPos;
 				long offset = pos - s.Position;
 				s.Seek (offset, SeekOrigin.Current);
 							

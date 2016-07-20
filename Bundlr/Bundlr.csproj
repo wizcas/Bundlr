@@ -41,11 +41,14 @@
     <Compile Include="StreamExtension.cs" />
     <Compile Include="Version.cs" />
     <Compile Include="Bundles.cs" />
-    <Compile Include="ResourceFile.cs" />
     <Compile Include="Diagnostic\Profiler.cs" />
+    <Compile Include="FileHandlers\ResourceFile.cs" />
+    <Compile Include="FileHandlers\BundleFile.cs" />
+    <Compile Include="FileHandlers\DiskFile.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="Diagnostic\" />
+    <Folder Include="FileHandlers\" />
   </ItemGroup>
 </Project>

@@ -11,7 +11,21 @@ namespace Bundlr
 		/// </summary>
 		public static BundleCaching Caching = BundleCaching.AlwaysCached;
 
-		private static Bundles instance = new Bundles ();
+		private static readonly object syncRoot = new object();
+		private static Bundles instance;
+		public static Bundles Instance {
+			get {
+				// Double-check locking
+				if (instance == null) {
+					lock (syncRoot) {
+						if (instance == null)
+							instance = new Bundles ();
+					}
+				}
+				return instance;
+			}
+		}
+
 		private static bool isDisposingAll = false;
 
 		/// <summary>
@@ -27,7 +41,6 @@ namespace Bundlr
 		/// </summary>
 		private Dictionary<string, int> bundleCounters = new Dictionary<string, int> ();
 
-
 		~Bundles ()
 		{
 			DisposeAll ();
@@ -41,19 +54,21 @@ namespace Bundlr
 		/// <value>The file list.</value>
 		public static string[] FileList {
 			get {
-				return instance.relpath2Bundle.Keys.ToArray ();
+				return Instance.relpath2Bundle.Keys.ToArray ();
 			}
 		}
+
 		/// <summary>
 		/// 从指定位置加载数据包。若新加载的数据包中有相对路径与已加载数据包冲突，则会用新包中的数据覆盖旧包的。
 		/// </summary>
 		/// <param name="filePath">数据包文件的磁盘路径</param>
 		public static void Load (string filePath)
 		{
-			lock (instance) {
-				instance.LoadBundle (filePath);
+			lock (syncRoot) {
+				Instance.LoadBundle (filePath);
 			}
 		}
+
 		/// <summary>
 		/// 通过相对路径从已加载的数据包中加载文件
 		/// </summary>
@@ -61,26 +76,27 @@ namespace Bundlr
 		internal static BundleFile File (string relativePath)
 		{
 			relativePath = relativePath.ToLower ();
-			if (!instance.relpath2Bundle.ContainsKey (relativePath)) {
+			if (!Instance.relpath2Bundle.ContainsKey (relativePath)) {
 				return null;
 			}
 
-			var bundle = instance.relpath2Bundle [relativePath];
+			var bundle = Instance.relpath2Bundle [relativePath];
 			return new BundleFile (relativePath, bundle);
 		}
+
 		/// <summary>
 		/// 释放所有已加载的数据包
 		/// </summary>
 		public static void DisposeAll ()
 		{
-			lock (instance) {
+			lock (syncRoot) {
 				isDisposingAll = true;
-				foreach (var bundle in instance.loadedBundles) {
+				foreach (var bundle in Instance.loadedBundles) {
 					bundle.Dispose ();
 				}
-				instance.relpath2Bundle.Clear ();
-				instance.loadedBundles.Clear ();
-				instance.bundleCounters.Clear ();
+				Instance.relpath2Bundle.Clear ();
+				Instance.loadedBundles.Clear ();
+				Instance.bundleCounters.Clear ();
 				isDisposingAll = false;
 			}
 		}
@@ -93,13 +109,14 @@ namespace Bundlr
 		{
 			try {
 
-				var bundle = Bundle.Load (filePath);
+				var bundle = new Bundle(filePath);
 
-				foreach (var file in bundle.FileList) {
-					RegisterFile (file, bundle);
+				foreach (var relPath in bundle.RelativePaths) {
+					RegisterRelPath (relPath, bundle);
 				}
 
 				bundle.onDisposed += OnBundleDisposed;
+
 				lock (loadedBundles) {
 					loadedBundles.Add (bundle);
 				}
@@ -108,7 +125,7 @@ namespace Bundlr
 			}
 		}
 
-		private void RegisterFile (string relPath, Bundle bundle)
+		private void RegisterRelPath (string relPath, Bundle bundle)
 		{
 			lock (relpath2Bundle) {
 				// 检查是否已存在相同的相对路径
@@ -161,7 +178,7 @@ namespace Bundlr
 				bundleCounters.Remove (bundle.Uid);
 			}
 			lock (relpath2Bundle) {
-				foreach (string file in bundle.FileList) {
+				foreach (string file in bundle.RelativePaths) {
 					if (!relpath2Bundle.ContainsKey (file))
 						continue;
 

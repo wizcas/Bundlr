@@ -15,7 +15,7 @@ namespace Bundlr
 		private Dictionary<string, FileMeta> dictMetadata = new Dictionary<string, FileMeta> ();
 		private FileStream fs;
 		private int headerLen;
-		private long dataStartOffset;
+		private long bodyBeginPos;
 
 		private object fsSync = new object ();
 
@@ -26,11 +26,13 @@ namespace Bundlr
 		/// </summary>
 		/// <value>The uid.</value>
 		internal string Uid{ get; private set; }
+
 		/// <summary>
 		/// 数据包版本
 		/// </summary>
 		/// <value>The version.</value>
 		internal Version Version { get; private set; }
+
 		/// <summary>
 		/// 数据包对应的磁盘文件路径
 		/// </summary>
@@ -41,32 +43,22 @@ namespace Bundlr
 		/// 包内所有文件相对路径的列表
 		/// </summary>
 		/// <value>The file list.</value>
-		internal string[] FileList {
+		internal string[] RelativePaths {
 			get {
 				return dictMetadata.Keys.ToArray ();
 			}
 		}
 
-		/// <summary>
-		/// 加载数据包
-		/// </summary>
-		/// <param name="filePath">数据包磁盘文件路径</param>
-		internal static Bundle Load (string filePath)
+		internal Bundle (string filePath)
 		{
-			filePath = Utils.Repath (filePath);
-			if (!File.Exists (filePath))
-				throw new ArgumentException ("Cannot file file: " + filePath);
-			var ret = new Bundle (filePath);
-			ret.Uid = Guid.NewGuid ().ToString ();
-			return ret;
-		}
-			
-		private Bundle (string filePath)
-		{
-			FilePath = filePath;
+			FilePath = Utils.Repath (filePath);
+
+			if (!File.Exists (FilePath))
+				throw new FileNotFoundException ("Cannot file file: " + filePath);
 
 			Monitor.Enter (fsSync);
 			try {
+				Uid = Guid.NewGuid ().ToString ();
 				LoadMetadata ();
 				if (Bundles.Caching == BundleCaching.AlwaysCached)
 					OpenFileStream ();
@@ -76,24 +68,39 @@ namespace Bundlr
 				Monitor.Exit (fsSync);
 			}
 		}
-			
+
 		/// <summary>
 		/// 加载数据包中的元数据信息
 		/// </summary>
 		private void LoadMetadata ()
 		{
-			OpenFileStream ();
-			fs.Seek (0, SeekOrigin.Begin);
-			headerLen = fs.ReadInt32 () + sizeof(int);
+			try {
+				Profiler.StartSample ("waitOne");
+				Monitor.Enter (fsSync);
+				Profiler.EndSample ("waitOne");
 
-			Version = Version.Deserialize (fs);
-			dataStartOffset = fs.ReadInt64 ();
+				OpenFileStream ();
 
-			while (fs.Position < headerLen) {
-				var fm = FileMeta.Deserialize (fs);
-				dictMetadata [fm.relativePath] = fm;
+				fs.Seek (0, SeekOrigin.Begin);
+				headerLen = fs.ReadInt32 () + sizeof(int);
+
+				Version = Version.Deserialize (fs);
+				bodyBeginPos = fs.ReadInt64 ();
+
+				while (fs.Position < headerLen) {
+					var fm = FileMeta.Deserialize (fs);
+					fm.bundleUid = Uid;
+					dictMetadata [fm.relativePath] = fm;
+				}
+			} catch (Exception e) {
+				throw e;
+			} finally {
+				CloseFileStream ();
+
+				Profiler.StartSample ("release");
+				Monitor.Exit (fsSync);
+				Profiler.EndSample ("release");
 			}
-			CloseFileStream ();
 		}
 
 		/// <summary>
@@ -103,7 +110,7 @@ namespace Bundlr
 		/// <param name="relativePath">文件相对路径(不区分大小写)</param>
 		internal bool Has (string relativePath)
 		{
-			return dictMetadata.ContainsKey (relativePath.ToLower());
+			return dictMetadata.ContainsKey (relativePath.ToLower ());
 		}
 
 		/// <summary>
@@ -113,10 +120,11 @@ namespace Bundlr
 		/// <param name="relativePath">文件相对路径（不区分大小写）</param>
 		internal FileMeta GetMetadata (string relativePath)
 		{
-			if (!Has (relativePath.ToLower()))
+			relativePath = relativePath.ToLower ();
+			if (!Has (relativePath))
 				return null;
 
-			return dictMetadata [relativePath.ToLower()];
+			return dictMetadata [relativePath];
 		}
 
 		/// <summary>
@@ -132,6 +140,9 @@ namespace Bundlr
 			if (meta == null)
 				throw new ArgumentNullException ("meta");
 
+			if (meta.bundleUid != Uid)
+				throw new ArgumentException ("File does not belong to this bundle.");
+
 			Utils.CheckReadParameters (dst, dstStartIndex, readFilePos, readSize, meta.size);
 
 			try {
@@ -139,11 +150,10 @@ namespace Bundlr
 				Monitor.Enter (fsSync);
 				Profiler.EndSample ("waitOne");
 
-				if (Bundles.Caching == BundleCaching.None)
-					OpenFileStream ();
+				OpenFileStream ();
 				
 				// 计算新的读取位置
-				long newPos = dataStartOffset + meta.pos + readFilePos;
+				long newPos = bodyBeginPos + meta.pos + readFilePos;
 				// 移动指针到读取位置
 				long offset2Current = newPos - fs.Position;
 				if (offset2Current != 0) {
@@ -158,8 +168,7 @@ namespace Bundlr
 			} catch (Exception e) {
 				throw e;
 			} finally {
-				if (Bundles.Caching == BundleCaching.None)
-					CloseFileStream ();
+				CloseFileStream ();
 				
 				Profiler.StartSample ("release");
 				Monitor.Exit (fsSync);
@@ -178,7 +187,7 @@ namespace Bundlr
 		{
 			try {
 				Monitor.Enter (fsSync);
-				CloseFileStream ();
+				CloseFileStream (true);
 				dictMetadata.Clear ();
 
 				if (onDisposed != null) {
@@ -194,13 +203,21 @@ namespace Bundlr
 
 		private void OpenFileStream ()
 		{
+			// 避免重复创建文件流
+			if (fs != null)
+				return;
+			
 			Profiler.StartSample ("open");
 			fs = new FileStream (FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
 			Profiler.EndSample ("open");
 		}
 
-		private void CloseFileStream ()
+		private void CloseFileStream (bool isDisposing = false)
 		{
+			// 始终缓存文件流时，如果不是数据包释放操作，则忽略关闭文件流的操作
+			if (!isDisposing && Bundles.Caching == BundleCaching.AlwaysCached)
+				return;
+			
 			Profiler.StartSample ("close");
 			if (fs == null)
 				return;

@@ -26,6 +26,12 @@ namespace Bundlr
 		/// <value>The length.</value>
 		public long size{ get; internal set; }
 
+		/// <summary>
+		/// 文件所属数据包的唯一ID，内部使用
+		/// 用于在读文件数据时，判断该文件是否属于指定的数据包
+		/// </summary>
+		internal string bundleUid;
+
 		internal FileMeta (string relPath, long size)
 		{
 			relativePath = relPath;
