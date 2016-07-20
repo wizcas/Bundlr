@@ -17,8 +17,11 @@ namespace BundlrTest
 		private static string[] files;
 		private static TestTask[] tasks;
 		private static int progress;
+
 		private static bool isMultiThreads;
 		private static int runTimes = 1;
+		private static bool isRandomAccess;
+
 		private static float totalBundleTime;
 		private static float totalFileSystemTime;
 		private static float totalFileSizeInMB;
@@ -29,6 +32,7 @@ namespace BundlrTest
 
 		public static void Main (string[] args)
 		{
+			#region Args & Settings
 			if (args.Length < 3) {
 				Console.WriteLine ("Usage: BundlrTest <PACK_FILE> <ACTUAL_DIR>> <RUN_TIMES> [c] [t] [r]");
 				return;
@@ -39,49 +43,30 @@ namespace BundlrTest
 			runTimes = int.Parse (args [2]);
 
 			isMultiThreads = args.Contains ("t") ? true : false;
-			bool isRandomFiles = args.Contains ("r") ? true : false;
+			isRandomAccess = args.Contains ("r") ? true : false;
 
 			if (args.Contains ("c"))
 				Bundles.Caching = BundleCaching.AlwaysCached;
 			else
 				Bundles.Caching = BundleCaching.None;
+			#endregion
 
 //			string filePath = "~/test.blr";
 //			bool isRandomFiles = true;
 
-			Console.WriteLine (
-				"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" +
-				"\nBundlr is running with settings: ");
-			Console.ForegroundColor = ConsoleColor.DarkGreen;
-			Console.WriteLine (
-				"\n> Bundles caching mode : {0}" +
-				"\n> File access sequence: {1}" +
-				"\n> Threading: {2}",
-				Bundles.Caching,
-				isRandomFiles ? "Randomly" : "Sequential",
-				isMultiThreads ? "Multi-threads" : "Single thread"
-			);
-			Console.ResetColor ();
-			Console.WriteLine (
-				"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+			OutputSettings ();
 
 			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
 			Bundles.Load (filePath);
 
 			progressMutex = new Mutex (false, "progress");
 
-			files = Bundles.FileList;
+			files = Bundles.RelativePaths;
 
-			if (isRandomFiles)
+			if (isRandomAccess)
 				files = ShuffleArray (files);
 
-			foreach (var file in files) {
-				var f = ResourceFile.Open (file);
-				totalFileSizeInMB += f.Size;
-				f.Close ();
-			}
-			totalFileSizeInMB /= 1024 * 1024;
-			Console.WriteLine ("Total file size: {0}MB", totalFileSizeInMB);
+			OutputTotalSize (files);
 
 			totalBundleAccSpeed = 0;
 			totalBundleTime = 0;
@@ -91,77 +76,53 @@ namespace BundlrTest
 			tasks = new TestTask[files.Length];
 
 			for (int i = 0; i < runTimes; i++) {
-				Console.WriteLine (">>> Running benchmark #" + (i + 1));
-				RunOne ();
+				RunOne (i);
 			}
 
-			Console.ForegroundColor = ConsoleColor.Blue;
-			Console.WriteLine ("\n\n\n=============== Performance Report ==============");
-			Console.WriteLine ("[Final Avg. File Access Speed]");
-			Console.WriteLine ("Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes);
-			Console.WriteLine ("[Final Avg. File Process Time]");
-			Console.WriteLine ("Bundlr: {0:N3}μs, FileSystem: {1:N3}μs", totalBundleTime / runTimes, totalFileSystemTime / runTimes);
-			Console.ResetColor ();
+			OutputFinalStatistics ();
 
 			// Output to file
 			using (var s = new StreamWriter (Utils.Repath ("~/profile.txt"), true, Encoding.UTF8)) {
 				s.WriteLine (string.Format ("{0:N4}\t{1:N4}", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes));
 			}
 
-			TestDuplicatedPath ();
+			TestDuplicatedRelativePath ();
 
 			Bundles.DisposeAll ();
 
 			OutputProfiler ();
 		}
 
-		private static string[] ShuffleArray (string[] files)
+		#region Outputs
+
+		private static void OutputSettings()
 		{
-			Random rnd = new Random (DateTime.Now.Millisecond);
-			List<string> ret = new List<string> ();
-			List<string> shuffled = new List<string> (files);
-			while (shuffled.Count > 0) {
-				int i = rnd.Next (0, shuffled.Count);
-				ret.Add (shuffled [i]);
-				shuffled.RemoveAt (i);
-			}
-			return ret.ToArray ();
+			Console.WriteLine (
+				"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" +
+				"\nBundlr is running with following settings: ");
+			Console.ForegroundColor = ConsoleColor.DarkGreen;
+			Console.WriteLine (
+				"\n> Bundles caching mode : {0}" +
+				"\n> File access sequence: {1}" +
+				"\n> Threading: {2}",
+				Bundles.Caching,
+				isRandomAccess ? "Randomly" : "Sequential",
+				isMultiThreads ? "Multi-threads" : "Single thread"
+			);
+			Console.ResetColor ();
+			Console.WriteLine (
+				"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");	
 		}
 
-		private static void RunOne ()
+		private static void OutputTotalSize(string[] files)
 		{
-			progress = 0;
-
-			List<Task> threadTasks = new List<Task> ();
-
-			for (int i = 0; i < files.Length; i++) {
-				var testPath = files [i];
-				var t = new TestTask (testPath);
-				tasks [i] = t;
-				if (!isMultiThreads)
-					t.Run ();
-				else {
-					var tt = new Task (t.Run);
-					tt.Start ();
-					threadTasks.Add (tt);
-
-				}
+			foreach (var file in files) {
+				var f = ResourceFile.Open (file);
+				totalFileSizeInMB += f.Size;
+				f.Close ();
 			}
-				
-			if (isMultiThreads)
-				Task.WaitAll (threadTasks.ToArray (), new TimeSpan (0, 1, 0));
-
-			OutputRunStatistics ();
-		}
-
-		public static void UpdateProgress ()
-		{
-			progressMutex.WaitOne ();
-			progress++;
-			Console.CursorLeft = 0;
-			Console.Write (string.Format ("Processing file {0} / {1}", progress, files.Length));
-
-			progressMutex.ReleaseMutex ();
+			totalFileSizeInMB /= 1024 * 1024;
+			Console.WriteLine ("Total file size: {0}MB", totalFileSizeInMB);
 		}
 
 		private static void OutputRunStatistics ()
@@ -199,7 +160,89 @@ namespace BundlrTest
 				avgBundleTime, avgFileSystemTime);	
 		}
 
-		private static void TestDuplicatedPath ()
+		private static void OutputFinalStatistics()
+		{
+			Console.ForegroundColor = ConsoleColor.Blue;
+			Console.WriteLine ("\n\n\n=============== Performance Report ==============");
+			Console.WriteLine ("[Final Avg. File Access Speed]");
+			Console.WriteLine ("Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes);
+			Console.WriteLine ("[Final Avg. File Process Time]");
+			Console.WriteLine ("Bundlr: {0:N3}μs, FileSystem: {1:N3}μs", totalBundleTime / runTimes, totalFileSystemTime / runTimes);
+			Console.ResetColor ();
+		}
+
+		private static void OutputProfiler ()
+		{
+			Console.WriteLine ("\n========= Detailed Profiler Report ===========");
+			Console.WriteLine (Profiler.OutputAll ());
+		}
+
+		#endregion
+
+		#region Helpers
+
+		private static string[] ShuffleArray (string[] files)
+		{
+			Random rnd = new Random (DateTime.Now.Millisecond);
+			List<string> ret = new List<string> ();
+			List<string> shuffled = new List<string> (files);
+			while (shuffled.Count > 0) {
+				int i = rnd.Next (0, shuffled.Count);
+				ret.Add (shuffled [i]);
+				shuffled.RemoveAt (i);
+			}
+			return ret.ToArray ();
+		}
+
+		public static void UpdateProgress ()
+		{
+			progressMutex.WaitOne ();
+			progress++;
+			Console.CursorLeft = 0;
+			Console.Write (string.Format ("Processing file {0} / {1}", progress, files.Length));
+
+			progressMutex.ReleaseMutex ();
+		}
+
+		private static string ReadTestTxtString ()
+		{
+			var f = ResourceFile.Open ("teSt.txt");
+			var data = new byte[(int)f.Size];
+			f.Read (data, 0, 0, (int)f.Size);
+			return Encoding.UTF8.GetString (data);
+		}
+
+		#endregion
+
+		#region Runs
+
+		private static void RunOne (int index)
+		{
+			Console.WriteLine (">>> Running benchmark #" + (index + 1));
+
+			progress = 0;
+
+			List<Task> threadTasks = new List<Task> ();
+
+			for (int i = 0; i < files.Length; i++) {
+				var testPath = files [i];
+				var t = new TestTask (testPath);
+				tasks [i] = t;
+				if (!isMultiThreads)
+					t.Run ();
+				else {
+					var threadTask = Task.Factory.StartNew (t.Run);
+					threadTasks.Add (threadTask);
+				}
+			}
+				
+			if (isMultiThreads)
+				Task.WaitAll (threadTasks.ToArray (), new TimeSpan (0, 1, 0));
+
+			OutputRunStatistics ();
+		}
+
+		private static void TestDuplicatedRelativePath ()
 		{
 			Console.WriteLine ("\n========= Duplicated Relative Path Test =========");
 			Console.WriteLine (">> In currently loaded Bundle");
@@ -214,18 +257,6 @@ namespace BundlrTest
 			Console.WriteLine ("  text.txt is now : {0}", s);
 		}
 
-		private static string ReadTestTxtString ()
-		{
-			var f = ResourceFile.Open ("teSt.txt");
-			var data = new byte[(int)f.Size];
-			f.Read (data, 0, 0, (int)f.Size);
-			return Encoding.UTF8.GetString (data);
-		}
-
-		private static void OutputProfiler ()
-		{
-			Console.WriteLine ("\n========= Detailed Profiler Report ===========");
-			Console.WriteLine (Profiler.OutputAll ());
-		}
+		#endregion
 	}
 }

@@ -52,7 +52,7 @@ namespace Bundlr
 		/// 已加载数据包中所有文件的相对路径列表
 		/// </summary>
 		/// <value>The file list.</value>
-		public static string[] FileList {
+		public static string[] RelativePaths {
 			get {
 				return Instance.relpath2Bundle.Keys.ToArray ();
 			}
