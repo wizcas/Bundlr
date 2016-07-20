@@ -7,7 +7,7 @@ namespace Bundlr
 	/// <summary>
 	/// 资源文件访问对象抽象基类
 	/// </summary>
-	public abstract class ResourceFile
+	public abstract class ResourceFile : IDisposable
 	{
 		/// <summary>
 		/// 全局设定，指定本地磁盘文件的相对路径搜索位置
@@ -53,6 +53,15 @@ namespace Bundlr
 		public virtual void Close ()
 		{
 		}
+
+		#region IDisposable implementation
+
+		public void Dispose ()
+		{
+			Close ();
+		}
+
+		#endregion
 	}
 
 	/// <summary>

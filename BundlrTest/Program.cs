@@ -49,8 +49,21 @@ namespace BundlrTest
 //			string filePath = "~/test.blr";
 //			bool isRandomFiles = true;
 
-			Console.WriteLine (">>>> Bundlr is running in [{0}] mem-mode >>>>", Bundles.Caching);
-			Console.WriteLine (">>>> Is random access? -> {0} >>>>", isRandomFiles);
+			Console.WriteLine (
+				"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" +
+				"\nBundlr is running with settings: ");
+			Console.ForegroundColor = ConsoleColor.DarkGreen;
+			Console.WriteLine (
+				"\n> Bundles caching mode : {0}" +
+				"\n> File access sequence: {1}" +
+				"\n> Threading: {2}",
+				Bundles.Caching,
+				isRandomFiles ? "Randomly" : "Sequential",
+				isMultiThreads ? "Multi-threads" : "Single thread"
+			);
+			Console.ResetColor ();
+			Console.WriteLine (
+				"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 
 			Console.WriteLine (string.Format ("Loading bundle file '{0}'", filePath));
 			Bundles.Load (filePath);
@@ -82,19 +95,19 @@ namespace BundlrTest
 				RunOne ();
 			}
 
+			Console.ForegroundColor = ConsoleColor.Blue;
 			Console.WriteLine ("\n\n\n=============== Performance Report ==============");
 			Console.WriteLine ("[Final Avg. File Access Speed]");
 			Console.WriteLine ("Bundlr: {0:N3}MB/s, FileSystem: {1:N3}MB/s", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes);
 			Console.WriteLine ("[Final Avg. File Process Time]");
 			Console.WriteLine ("Bundlr: {0:N3}μs, FileSystem: {1:N3}μs", totalBundleTime / runTimes, totalFileSystemTime / runTimes);
-
+			Console.ResetColor ();
 
 			// Output to file
 			using (var s = new StreamWriter (Utils.Repath ("~/profile.txt"), true, Encoding.UTF8)) {
 				s.WriteLine (string.Format ("{0:N4}\t{1:N4}", totalBundleAccSpeed / runTimes, totalFileSystemAccSpeed / runTimes));
 			}
 
-			Console.WriteLine ("\n\n\n========= Duplicated Relative Path Test =========");
 			TestDuplicatedPath ();
 
 			Bundles.DisposeAll ();
@@ -188,6 +201,7 @@ namespace BundlrTest
 
 		private static void TestDuplicatedPath ()
 		{
+			Console.WriteLine ("\n========= Duplicated Relative Path Test =========");
 			Console.WriteLine (">> In currently loaded Bundle");
 
 			string s = ReadTestTxtString ();
@@ -210,6 +224,7 @@ namespace BundlrTest
 
 		private static void OutputProfiler ()
 		{
+			Console.WriteLine ("\n========= Detailed Profiler Report ===========");
 			Console.WriteLine (Profiler.OutputAll ());
 		}
 	}

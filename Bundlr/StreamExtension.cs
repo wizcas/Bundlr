@@ -24,6 +24,13 @@ namespace Bundlr
 
 		#region Write
 
+		/// <summary>
+		/// 以指定流作为源，写入指定长度到该流中
+		/// </summary>
+		/// <returns>当前操作的流对象</returns>
+		/// <param name="s">当前操作的流对象</param>
+		/// <param name="source">作为写入源的流对象</param>
+		/// <param name="size">写入的字节长度</param>
 		public static Stream WriteFromStream(this Stream s, Stream source, long size)
 		{
 			byte[] buffer = new byte[size];
@@ -42,6 +49,11 @@ namespace Bundlr
 			return s;
 		}
 
+		/// <summary>
+		/// 向流中写入无符号16位整数
+		/// </summary>
+		/// <param name="s">当前操作的流对象</param>
+		/// <param name="value">写入值</param>
 		public static Stream Write (this Stream s, UInt16 value)
 		{
 			var bytes = UnifyBytesOrder (BitConverter.GetBytes (value));
@@ -49,6 +61,11 @@ namespace Bundlr
 			return s;
 		}
 
+		/// <summary>
+		/// 向流中写入32位整数
+		/// </summary>
+		/// <param name="s">当前操作的流对象</param>
+		/// <param name="value">写入值</param>
 		public static Stream Write (this Stream s, int value)
 		{
 			var bytes = UnifyBytesOrder (BitConverter.GetBytes (value));
@@ -56,6 +73,11 @@ namespace Bundlr
 			return s;
 		}
 
+		/// <summary>
+		/// 向流中写入64位整数
+		/// </summary>
+		/// <param name="s">当前操作的流对象</param>
+		/// <param name="value">写入值</param>
 		public static Stream Write (this Stream s, long value)
 		{
 			var bytes = UnifyBytesOrder (BitConverter.GetBytes (value));
@@ -63,6 +85,11 @@ namespace Bundlr
 			return s;
 		}
 
+		/// <summary>
+		/// 向流中写入字符串
+		/// </summary>
+		/// <param name="s">当前操作的流对象</param>
+		/// <param name="value">写入值</param>
 		public static Stream Write (this Stream s, string value)
 		{
 			var bytes = Encoding.UTF8.GetBytes (value);
@@ -80,6 +107,11 @@ namespace Bundlr
 
 		#region Read
 
+		/// <summary>
+		/// 从流中读取无符号16位整数
+		/// </summary>
+		/// <returns>读取的值</returns>
+		/// <param name="s">当前操作的流对象</param>
 		public static UInt16 ReadUInt16 (this Stream s)
 		{
 			var bytes = new byte[sizeof(UInt16)];
@@ -87,6 +119,11 @@ namespace Bundlr
 			return BitConverter.ToUInt16 (bytes, 0);
 		}
 
+		/// <summary>
+		/// 从流中读取32位整数
+		/// </summary>
+		/// <returns>读取的值</returns>
+		/// <param name="s">当前操作的流对象</param>
 		public static int ReadInt32 (this Stream s)
 		{
 			var bytes = new byte[sizeof(int)];
@@ -94,6 +131,11 @@ namespace Bundlr
 			return BitConverter.ToInt32 (bytes, 0);
 		}
 
+		/// <summary>
+		/// 从流中读取64位整数
+		/// </summary>
+		/// <returns>读取的值</returns>
+		/// <param name="s">当前操作的流对象</param>
 		public static long ReadInt64 (this Stream s)
 		{
 			var bytes = new byte[sizeof(long)];
@@ -101,6 +143,11 @@ namespace Bundlr
 			return BitConverter.ToInt64 (bytes, 0);
 		}
 
+		/// <summary>
+		/// 从流中读取字符串
+		/// </summary>
+		/// <returns>读取的字符串</returns>
+		/// <param name="s">当前操作的流对象</param>
 		public static string ReadString (this Stream s)
 		{
 			UInt16 len = s.ReadUInt16 ();

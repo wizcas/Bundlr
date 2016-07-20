@@ -4,6 +4,9 @@ namespace Bundlr
 {
 	public static class Constants
 	{
+		/// <summary>
+		/// 数据包的字节对齐数
+		/// </summary>
 		public const int NumOfBytesAlignment = 8;
 
 		/// <summary>

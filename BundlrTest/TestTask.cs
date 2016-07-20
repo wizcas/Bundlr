@@ -26,16 +26,17 @@ namespace BundlrTest
 		private void DoRun()
 		{
 			timer.Restart ();
-			var bf = ResourceFile.Open (relPath);
-			var size = bf.Size / (float)(1024 * 1024); // unit in MB
+			float sizeInMB;
+			byte[] data1;
+			using (var bf = ResourceFile.Open (relPath)) {
+				sizeInMB = bf.Size / (float)(1024 * 1024); // unit in MB
+				data1 = new byte[(int)bf.Size];
+				bf.Read (data1, 0, 0, (int)bf.Size);
+			}
 
-			var data1 = new byte[(int)bf.Size];
-			bf.Read (data1, 0, 0, (int)bf.Size);
-
-			bf.Close ();
 			timer.Stop ();
 			bundleTicks = timer.ElapsedTicks;
-			bundleAccSpeed = size / (bundleTicks * Profiler.secPerTick); // unit in MB/s
+			bundleAccSpeed = sizeInMB / (bundleTicks * Profiler.secPerTick); // unit in MB/s
 
 			var f = new FileInfo (Path.Combine(MainClass.ActualDirRoot, relPath));
 			timer.Restart ();
@@ -50,7 +51,7 @@ namespace BundlrTest
 			Profiler.EndSample ("readFile");
 			timer.Stop ();
 			fileSystemTicks = timer.ElapsedTicks;
-			fileSystemAccSpeed = size / (fileSystemTicks * Profiler.secPerTick); // unit in MB/s
+			fileSystemAccSpeed = sizeInMB / (fileSystemTicks * Profiler.secPerTick); // unit in MB/s
 
 			bool isDataSame = true;
 			if (data1.Length != data2.Length) {
