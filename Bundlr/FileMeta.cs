@@ -32,13 +32,6 @@ namespace Bundlr
 		/// </summary>
 		internal string bundleUid;
 
-		internal FileMeta (string relPath, long size)
-		{
-			relativePath = relPath;
-			pos = -1;
-			this.size = size;
-		}
-
 		internal FileMeta (string relPath, long pos, long length)
 		{
 			this.relativePath = relPath;

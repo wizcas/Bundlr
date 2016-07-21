@@ -47,6 +47,14 @@ namespace Bundlr
 		/// </summary>
 		public void Pack ()
 		{
+			// 数据包格式
+			// |            | 							Header							   |    Body   |
+			// +------------+------------------------+-----------------------+-------------+-----------+
+			// |            |			Info         | 		Metadata #1      | Metadata #N |           |
+			// +------------+------------------------+-----------------------+-------------+-----------+
+			// |    int     | Version |     long     | string  | long | long |     ...     | byte[]    |
+			// | HeaderSize | Version | BodyBeginPos | RelPath | Pos  | Size |     ...     | FileBytes |
+
 			using (FileStream fs = new FileStream (bundlePathWithName, FileMode.Create, FileAccess.Write)) {
 				// All files' metadata
 				byte[] metaBytes = GenerateMetadata ();
@@ -55,15 +63,13 @@ namespace Bundlr
 				int headerSize = CalculateHeaderSize (metaBytes.Length);
 				long bodyBeginPos = Utils.GetByteAlignedPos (headerSize);
 
-				// Bundle's own info
-				byte[] infoBytes = GenerateInfo (bodyBeginPos);
-
 				fs.Write (headerSize - sizeof(int)); // Writes (info size + files' metadata size)
-				fs.Write (infoBytes, 0, infoBytes.Length); // Writes bundle's info
+
+				WriteBundleInfo (fs, bodyBeginPos); // Writes bundle's info
+
 				fs.Write (metaBytes, 0, metaBytes.Length); // Writes all files' metadata
 
-				// Write all files
-				WriteFileBytes (fs, bodyBeginPos);
+				WriteFileBytes (fs, bodyBeginPos); // Writes all files' bytes
 
 				fs.Flush ();
 			}
@@ -87,6 +93,7 @@ namespace Bundlr
 					var fileSize = fileInfo.Length;
 
 					var meta = new FileMeta (relPath, pos, fileSize);
+					//把元数据存储在打包文件信息里，用于在WriteFileBytes中确定位置
 					file.metadata = meta;
 
 					meta.Serialize (s);
@@ -112,26 +119,23 @@ namespace Bundlr
 		}
 
 		/// <summary>
-		/// 生成数据包信息
+		/// 将数据包信息写入流
 		/// </summary>
-		/// <returns>数据包信息数据</returns>
-		/// <param name="dataStartOffset">数据包体部分起始位置</param>
-		private byte[] GenerateInfo (long bodyBeginPos)
+		/// <param name="s">目标流</param>
+		/// <param name="bodyBeginPos">包体起始位置</param>
+		private void WriteBundleInfo(Stream s, long bodyBeginPos)
 		{
-			Console.WriteLine ("Generating file info...");
-			using (MemoryStream s = new MemoryStream ()) {
-				//写入数据包版本号
-				CurrentVersion.Serialize (s);
-				//写入数据包起始位置
-				s.Write (bodyBeginPos);
-				s.Flush ();
-				return s.ToArray ();
-			}
+			// 写入数据包版本号
+			CurrentVersion.Serialize (s);
+			// 写入数据包起始位置
+			s.Write(bodyBeginPos);
+			s.Flush ();
 		}
+
 		/// <summary>
-		/// 依次将打包文件的文件数据写入数据包
+		/// 依次将打包文件的文件数据写入流
 		/// </summary>
-		/// <param name="s">要写入的流</param>
+		/// <param name="s">目标流</param>
 		/// <param name="startOffset">包体数据的起始写入位置</param>
 		private void WriteFileBytes (Stream s, long bodyBeginPos)
 		{
