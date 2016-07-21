@@ -81,6 +81,10 @@ namespace Bundlr
 			}
 
 			var bundle = Instance.relpath2Bundle [relativePath];
+
+			if (bundle == null)
+				return null;
+
 			return new BundleFile (relativePath, bundle);
 		}
 
